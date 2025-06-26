@@ -1,0 +1,41 @@
+server:
+  log_level: info
+
+metrics:
+  global:
+    remote_write:
+      - url: http://prometheus:9090/api/v1/write
+        basic_auth:
+          username: admin
+          password: admin
+
+logs:
+  configs:
+    - name: default
+      positions:
+        filename: /tmp/positions.yaml
+      clients:
+        - url: http://loki:3100/loki/api/v1/push
+      scrape_configs:
+        - job_name: address-service
+          static_configs:
+            - targets:
+                - localhost
+              labels:
+                job: address-service
+                __path__: /var/log/address-service/*.log
+
+traces:
+  configs:
+    - name: default
+      receivers:
+        otlp:
+          protocols:
+            grpc:
+              endpoint: 0.0.0.0:4317
+            http:
+              endpoint: 0.0.0.0:4318
+      remote_write:
+        - endpoint: tempo:3200
+          tls:
+            insecure: true 

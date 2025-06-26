@@ -1,0 +1,683 @@
+{
+	"info": {
+		"_postman_id": "address-service-api-collection",
+		"name": "Address Service API",
+		"description": "Collection for testing the Address Service API with Smarty US Street Address validation",
+		"schema": "https://schema.getpostman.com/json/collection/v2.1.0/collection.json",
+		"_exporter_id": "address-service"
+	},
+	"item": [
+		{
+			"name": "Health Check",
+			"item": [
+				{
+					"name": "GET Health Check",
+					"request": {
+						"method": "GET",
+						"header": [
+							{
+								"key": "x-correlation-id",
+								"value": "{{correlationId}}",
+								"type": "text"
+							}
+						],
+						"url": {
+							"raw": "{{baseUrl}}/health",
+							"host": [
+								"{{baseUrl}}"
+							],
+							"path": [
+								"health"
+							]
+						},
+						"description": "Health check endpoint to verify the service is running"
+					},
+					"response": []
+				}
+			],
+			"description": "Health check endpoints"
+		},
+		{
+			"name": "Address Validation",
+			"item": [
+				{
+					"name": "POST Validate Address - Complete",
+					"request": {
+						"method": "POST",
+						"header": [
+							{
+								"key": "Content-Type",
+								"value": "application/json",
+								"type": "text"
+							},
+							{
+								"key": "x-correlation-id",
+								"value": "{{correlationId}}",
+								"type": "text"
+							}
+						],
+						"body": {
+							"mode": "raw",
+							"raw": "{\n  \"correlationId\": \"{{correlationId}}\",\n  \"street\": \"1600 Amphitheatre Parkway\",\n  \"city\": \"Mountain View\",\n  \"state\": \"CA\",\n  \"zipcode\": \"94043\",\n  \"addressee\": \"John Doe\",\n  \"candidates\": 3,\n  \"match\": \"range\"\n}",
+							"options": {
+								"raw": {
+									"language": "json"
+								}
+							}
+						},
+						"url": {
+							"raw": "{{baseUrl}}/api/v1/addresses/validate",
+							"host": [
+								"{{baseUrl}}"
+							],
+							"path": [
+								"api",
+								"v1",
+								"addresses",
+								"validate"
+							]
+						},
+						"description": "Validate a complete address with all fields including correlationId"
+					},
+					"response": []
+				},
+				{
+					"name": "POST Validate Address - Minimal",
+					"request": {
+						"method": "POST",
+						"header": [
+							{
+								"key": "Content-Type",
+								"value": "application/json",
+								"type": "text"
+							},
+							{
+								"key": "x-correlation-id",
+								"value": "{{correlationId}}",
+								"type": "text"
+							}
+						],
+						"body": {
+							"mode": "raw",
+							"raw": "{\n  \"correlationId\": \"{{correlationId}}\",\n  \"street\": \"123 Main St\",\n  \"city\": \"New York\",\n  \"state\": \"NY\"\n}",
+							"options": {
+								"raw": {
+									"language": "json"
+								}
+							}
+						},
+						"url": {
+							"raw": "{{baseUrl}}/api/v1/addresses/validate",
+							"host": [
+								"{{baseUrl}}"
+							],
+							"path": [
+								"api",
+								"v1",
+								"addresses",
+								"validate"
+							]
+						},
+						"description": "Validate an address with minimal required fields"
+					},
+					"response": []
+				},
+				{
+					"name": "POST Validate Address - With Secondary",
+					"request": {
+						"method": "POST",
+						"header": [
+							{
+								"key": "Content-Type",
+								"value": "application/json",
+								"type": "text"
+							},
+							{
+								"key": "x-correlation-id",
+								"value": "{{correlationId}}",
+								"type": "text"
+							}
+						],
+						"body": {
+							"mode": "raw",
+							"raw": "{\n  \"correlationId\": \"{{correlationId}}\",\n  \"street\": \"123 Main Street\",\n  \"street2\": \"Apt 4B\",\n  \"city\": \"New York\",\n  \"state\": \"NY\",\n  \"zipcode\": \"10001\"\n}",
+							"options": {
+								"raw": {
+									"language": "json"
+								}
+							}
+						},
+						"url": {
+							"raw": "{{baseUrl}}/api/v1/addresses/validate",
+							"host": [
+								"{{baseUrl}}"
+							],
+							"path": [
+								"api",
+								"v1",
+								"addresses",
+								"validate"
+							]
+						},
+						"description": "Validate an address with secondary address information (apartment, suite, etc.)"
+					},
+					"response": []
+				},
+				{
+					"name": "POST Validate Address - PO Box",
+					"request": {
+						"method": "POST",
+						"header": [
+							{
+								"key": "Content-Type",
+								"value": "application/json",
+								"type": "text"
+							},
+							{
+								"key": "x-correlation-id",
+								"value": "{{correlationId}}",
+								"type": "text"
+							}
+						],
+						"body": {
+							"mode": "raw",
+							"raw": "{\n  \"correlationId\": \"{{correlationId}}\",\n  \"street\": \"PO Box 123\",\n  \"city\": \"Anytown\",\n  \"state\": \"CA\",\n  \"zipcode\": \"90210\"\n}",
+							"options": {
+								"raw": {
+									"language": "json"
+								}
+							}
+						},
+						"url": {
+							"raw": "{{baseUrl}}/api/v1/addresses/validate",
+							"host": [
+								"{{baseUrl}}"
+							],
+							"path": [
+								"api",
+								"v1",
+								"addresses",
+								"validate"
+							]
+						},
+						"description": "Validate a PO Box address"
+					},
+					"response": []
+				},
+				{
+					"name": "POST Validate Address - Invalid (Missing correlationId)",
+					"request": {
+						"method": "POST",
+						"header": [
+							{
+								"key": "Content-Type",
+								"value": "application/json",
+								"type": "text"
+							},
+							{
+								"key": "x-correlation-id",
+								"value": "{{correlationId}}",
+								"type": "text"
+							}
+						],
+						"body": {
+							"mode": "raw",
+							"raw": "{\n  \"street\": \"1600 Amphitheatre Parkway\",\n  \"city\": \"Mountain View\",\n  \"state\": \"CA\"\n}",
+							"options": {
+								"raw": {
+									"language": "json"
+								}
+							}
+						},
+						"url": {
+							"raw": "{{baseUrl}}/api/v1/addresses/validate",
+							"host": [
+								"{{baseUrl}}"
+							],
+							"path": [
+								"api",
+								"v1",
+								"addresses",
+								"validate"
+							]
+						},
+						"description": "Test validation error when correlationId is missing from request body"
+					},
+					"response": []
+				},
+				{
+					"name": "POST Validate Address - Invalid (Field Length)",
+					"request": {
+						"method": "POST",
+						"header": [
+							{
+								"key": "Content-Type",
+								"value": "application/json",
+								"type": "text"
+							},
+							{
+								"key": "x-correlation-id",
+								"value": "{{correlationId}}",
+								"type": "text"
+							}
+						],
+						"body": {
+							"mode": "raw",
+							"raw": "{\n  \"correlationId\": \"{{correlationId}}\",\n  \"street\": \"This is a very long street name that exceeds the maximum allowed length of 100 characters and should cause a validation error\",\n  \"city\": \"This is a very long city name that exceeds the maximum allowed length of 64 characters\",\n  \"state\": \"CA\"\n}",
+							"options": {
+								"raw": {
+									"language": "json"
+								}
+							}
+						},
+						"url": {
+							"raw": "{{baseUrl}}/api/v1/addresses/validate",
+							"host": [
+								"{{baseUrl}}"
+							],
+							"path": [
+								"api",
+								"v1",
+								"addresses",
+								"validate"
+							]
+						},
+						"description": "Test validation error when field lengths exceed limits"
+					},
+					"response": []
+				},
+				{
+					"name": "POST Validate Address - Invalid (Candidates Range)",
+					"request": {
+						"method": "POST",
+						"header": [
+							{
+								"key": "Content-Type",
+								"value": "application/json",
+								"type": "text"
+							},
+							{
+								"key": "x-correlation-id",
+								"value": "{{correlationId}}",
+								"type": "text"
+							}
+						],
+						"body": {
+							"mode": "raw",
+							"raw": "{\n  \"correlationId\": \"{{correlationId}}\",\n  \"street\": \"123 Main St\",\n  \"city\": \"New York\",\n  \"state\": \"NY\",\n  \"candidates\": 15\n}",
+							"options": {
+								"raw": {
+									"language": "json"
+								}
+							}
+						},
+						"url": {
+							"raw": "{{baseUrl}}/api/v1/addresses/validate",
+							"host": [
+								"{{baseUrl}}"
+							],
+							"path": [
+								"api",
+								"v1",
+								"addresses",
+								"validate"
+							]
+						},
+						"description": "Test validation error when candidates value exceeds maximum (10)"
+					},
+					"response": []
+				},
+				{
+					"name": "GET Validate Address - Complete",
+					"request": {
+						"method": "GET",
+						"header": [
+							{
+								"key": "x-correlation-id",
+								"value": "{{correlationId}}",
+								"type": "text"
+							}
+						],
+						"url": {
+							"raw": "{{baseUrl}}/api/v1/addresses/validate?correlationId={{correlationId}}&street=1600 Amphitheatre Parkway&city=Mountain View&state=CA&zipcode=94043&addressee=John Doe&candidates=3&match=range",
+							"host": [
+								"{{baseUrl}}"
+							],
+							"path": [
+								"api",
+								"v1",
+								"addresses",
+								"validate"
+							],
+							"query": [
+								{
+									"key": "correlationId",
+									"value": "{{correlationId}}"
+								},
+								{
+									"key": "street",
+									"value": "1600 Amphitheatre Parkway"
+								},
+								{
+									"key": "city",
+									"value": "Mountain View"
+								},
+								{
+									"key": "state",
+									"value": "CA"
+								},
+								{
+									"key": "zipcode",
+									"value": "94043"
+								},
+								{
+									"key": "addressee",
+									"value": "John Doe"
+								},
+								{
+									"key": "candidates",
+									"value": "3"
+								},
+								{
+									"key": "match",
+									"value": "range"
+								}
+							]
+						},
+						"description": "Validate address using GET with query parameters"
+					},
+					"response": []
+				},
+				{
+					"name": "GET Validate Address - Minimal",
+					"request": {
+						"method": "GET",
+						"header": [
+							{
+								"key": "x-correlation-id",
+								"value": "{{correlationId}}",
+								"type": "text"
+							}
+						],
+						"url": {
+							"raw": "{{baseUrl}}/api/v1/addresses/validate?correlationId={{correlationId}}&street=123 Main St&city=New York&state=NY",
+							"host": [
+								"{{baseUrl}}"
+							],
+							"path": [
+								"api",
+								"v1",
+								"addresses",
+								"validate"
+							],
+							"query": [
+								{
+									"key": "correlationId",
+									"value": "{{correlationId}}"
+								},
+								{
+									"key": "street",
+									"value": "123 Main St"
+								},
+								{
+									"key": "city",
+									"value": "New York"
+								},
+								{
+									"key": "state",
+									"value": "NY"
+								}
+							]
+						},
+						"description": "Validate address using GET with minimal query parameters"
+					},
+					"response": []
+				},
+				{
+					"name": "GET Validate Address - Invalid (Missing correlationId)",
+					"request": {
+						"method": "GET",
+						"header": [
+							{
+								"key": "x-correlation-id",
+								"value": "{{correlationId}}",
+								"type": "text"
+							}
+						],
+						"url": {
+							"raw": "{{baseUrl}}/api/v1/addresses/validate?street=123 Main St&city=New York&state=NY",
+							"host": [
+								"{{baseUrl}}"
+							],
+							"path": [
+								"api",
+								"v1",
+								"addresses",
+								"validate"
+							],
+							"query": [
+								{
+									"key": "street",
+									"value": "123 Main St"
+								},
+								{
+									"key": "city",
+									"value": "New York"
+								},
+								{
+									"key": "state",
+									"value": "NY"
+								}
+							]
+						},
+						"description": "Test validation error when correlationId is missing from query parameters"
+					},
+					"response": []
+				},
+				{
+					"name": "GET Validate Address - Special Characters",
+					"request": {
+						"method": "GET",
+						"header": [
+							{
+								"key": "x-correlation-id",
+								"value": "{{correlationId}}",
+								"type": "text"
+							}
+						],
+						"url": {
+							"raw": "{{baseUrl}}/api/v1/addresses/validate?correlationId={{correlationId}}&street=123 Main St #4B&city=New York&state=NY",
+							"host": [
+								"{{baseUrl}}"
+							],
+							"path": [
+								"api",
+								"v1",
+								"addresses",
+								"validate"
+							],
+							"query": [
+								{
+									"key": "correlationId",
+									"value": "{{correlationId}}"
+								},
+								{
+									"key": "street",
+									"value": "123 Main St #4B"
+								},
+								{
+									"key": "city",
+									"value": "New York"
+								},
+								{
+									"key": "state",
+									"value": "NY"
+								}
+							]
+						},
+						"description": "Test address validation with special characters in street address"
+					},
+					"response": []
+				}
+			],
+			"description": "Address validation endpoints using Smarty US Street Address API"
+		},
+		{
+			"name": "Error Scenarios",
+			"item": [
+				{
+					"name": "POST Malformed JSON",
+					"request": {
+						"method": "POST",
+						"header": [
+							{
+								"key": "Content-Type",
+								"value": "application/json",
+								"type": "text"
+							},
+							{
+								"key": "x-correlation-id",
+								"value": "{{correlationId}}",
+								"type": "text"
+							}
+						],
+						"body": {
+							"mode": "raw",
+							"raw": "{\n  \"correlationId\": \"{{correlationId}}\",\n  \"street\": \"1600 Amphitheatre Parkway\",\n  \"city\": \"Mountain View\",\n  \"state\": \"CA\",\n  \"zipcode\": \"94043\",\n}",
+							"options": {
+								"raw": {
+									"language": "json"
+								}
+							}
+						},
+						"url": {
+							"raw": "{{baseUrl}}/api/v1/addresses/validate",
+							"host": [
+								"{{baseUrl}}"
+							],
+							"path": [
+								"api",
+								"v1",
+								"addresses",
+								"validate"
+							]
+						},
+						"description": "Test error handling for malformed JSON (trailing comma)"
+					},
+					"response": []
+				},
+				{
+					"name": "POST Invalid Content-Type",
+					"request": {
+						"method": "POST",
+						"header": [
+							{
+								"key": "Content-Type",
+								"value": "text/plain",
+								"type": "text"
+							},
+							{
+								"key": "x-correlation-id",
+								"value": "{{correlationId}}",
+								"type": "text"
+							}
+						],
+						"body": {
+							"mode": "raw",
+							"raw": "correlationId={{correlationId}}&street=1600 Amphitheatre Parkway&city=Mountain View&state=CA",
+							"options": {
+								"raw": {
+									"language": "text"
+								}
+							}
+						},
+						"url": {
+							"raw": "{{baseUrl}}/api/v1/addresses/validate",
+							"host": [
+								"{{baseUrl}}"
+							],
+							"path": [
+								"api",
+								"v1",
+								"addresses",
+								"validate"
+							]
+						},
+						"description": "Test error handling for invalid Content-Type"
+					},
+					"response": []
+				},
+				{
+					"name": "POST Empty Body",
+					"request": {
+						"method": "POST",
+						"header": [
+							{
+								"key": "Content-Type",
+								"value": "application/json",
+								"type": "text"
+							},
+							{
+								"key": "x-correlation-id",
+								"value": "{{correlationId}}",
+								"type": "text"
+							}
+						],
+						"body": {
+							"mode": "raw",
+							"raw": "",
+							"options": {
+								"raw": {
+									"language": "json"
+								}
+							}
+						},
+						"url": {
+							"raw": "{{baseUrl}}/api/v1/addresses/validate",
+							"host": [
+								"{{baseUrl}}"
+							],
+							"path": [
+								"api",
+								"v1",
+								"addresses",
+								"validate"
+							]
+						},
+						"description": "Test error handling for empty request body"
+					},
+					"response": []
+				}
+			],
+			"description": "Error handling and edge case scenarios"
+		}
+	],
+	"event": [
+		{
+			"listen": "prerequest",
+			"script": {
+				"type": "text/javascript",
+				"exec": [
+					"// Generate a unique correlation ID for each request if not already set",
+					"if (!pm.collectionVariables.get('correlationId')) {",
+					"    pm.collectionVariables.set('correlationId', pm.variables.replaceIn('{{$guid}}'));",
+					"}"
+				]
+			}
+		}
+	],
+	"variable": [
+		{
+			"key": "baseUrl",
+			"value": "http://localhost:3000",
+			"type": "string",
+			"description": "Base URL for the Address Service API"
+		},
+		{
+			"key": "correlationId",
+			"value": "",
+			"type": "string",
+			"description": "Correlation ID for request tracking (auto-generated if empty)"
+		}
+	]
+} 
