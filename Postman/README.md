@@ -6,8 +6,8 @@ This Postman collection provides a comprehensive set of requests to test the Add
 
 The collection includes:
 - **Health Check**: Verify service status
-- **Address Validation**: Validate addresses via POST and GET requests
-- **Error Handling**: Test various error scenarios
+- **Address Validation**: Validate addresses via POST requests (Complete and Minimal variants)
+- **Error Handling**: Test various error scenarios including malformed JSON, invalid content types, and empty requests
 - **Correlation ID Tracking**: Test request tracing functionality
 
 ## Setup Instructions
@@ -55,45 +55,96 @@ docker-compose up --build
 - **Method**: GET
 - **URL**: `{{baseUrl}}/health`
 - **Description**: Verifies the service is running and healthy
+- **Headers**: `X-Correlation-ID: {{correlationId}}`
 - **Expected Response**: 200 OK with service status
 
-### 2. Validate Address (POST)
+### 2. Address Validation
+
+#### POST Validate Address - Complete
 - **Method**: POST
 - **URL**: `{{baseUrl}}/api/v1/addresses/validate`
-- **Description**: Validates an address using JSON request body
+- **Description**: Validates a complete address with all fields including correlationId
 - **Headers**: 
   - `Content-Type: application/json`
   - `X-Correlation-ID: {{correlationId}}`
-- **Body**: JSON with address details and correlationId
+- **Body**: JSON with complete address details including street, city, state, zipcode, addressee, candidates, and match parameters
 
-### 3. Validate Address (GET)
-- **Method**: GET
+#### POST Validate Address - Minimal
+- **Method**: POST
 - **URL**: `{{baseUrl}}/api/v1/addresses/validate`
-- **Description**: Validates an address using query parameters
-- **Query Params**: All address fields and correlationId
+- **Description**: Validates an address with minimal required fields
+- **Headers**: 
+  - `Content-Type: application/json`
+  - `X-Correlation-ID: {{correlationId}}`
+- **Body**: JSON with minimal address fields (street, city, state, correlationId)
 
-### 4. Error Scenarios
+### 3. Error Scenarios
 
-#### Missing Correlation ID
-- Tests validation when correlationId is missing from request body
-- Expected: 400 Bad Request
+#### POST Malformed JSON
+- **Method**: POST
+- **URL**: `{{baseUrl}}/api/v1/addresses/validate`
+- **Description**: Tests error handling for malformed JSON (trailing comma)
+- **Headers**: 
+  - `Content-Type: application/json`
+  - `X-Correlation-ID: {{correlationId}}`
+- **Body**: JSON with syntax error (trailing comma)
+- **Expected**: 400 Bad Request
 
-#### Invalid Address
-- Tests with an invalid/non-existent address
-- Expected: 200 OK with validation failure
+#### POST Invalid Content-Type
+- **Method**: POST
+- **URL**: `{{baseUrl}}/api/v1/addresses/validate`
+- **Description**: Tests error handling for invalid Content-Type
+- **Headers**: 
+  - `Content-Type: text/plain`
+  - `X-Correlation-ID: {{correlationId}}`
+- **Body**: URL-encoded form data
+- **Expected**: 400 Bad Request
 
-#### Missing Required Fields
-- Tests with missing required address fields
-- Expected: 400 Bad Request
+#### POST Empty Body
+- **Method**: POST
+- **URL**: `{{baseUrl}}/api/v1/addresses/validate`
+- **Description**: Tests error handling for empty request body
+- **Headers**: 
+  - `Content-Type: application/json`
+  - `X-Correlation-ID: {{correlationId}}`
+- **Body**: Empty string
+- **Expected**: 400 Bad Request
 
 ## Usage Examples
 
 ### Basic Address Validation
 
-1. Select the "Validate Address (POST)" request
-2. The request body is pre-filled with example data
+1. Select the "POST Validate Address - Complete" request
+2. The request body is pre-filled with example data:
+   ```json
+   {
+     "correlationId": "{{correlationId}}",
+     "street": "6902 Silver Springs Dr NW",
+     "city": "Gig Harbor",
+     "state": "WA",
+     "zipcode": "98335",
+     "addressee": "John Blayter",
+     "candidates": 3,
+     "match": "range"
+   }
+   ```
 3. Click "Send"
 4. Check the response for validation results
+
+### Testing Minimal Address Validation
+
+1. Select the "POST Validate Address - Minimal" request
+2. The request body contains only required fields:
+   ```json
+   {
+     "correlationId": "{{correlationId}}",
+     "street": "6902 Silver Springs",
+     "city": "Gig Harbor",
+     "state": "WA"
+   }
+   ```
+3. Click "Send"
+4. Verify the validation works with minimal data
 
 ### Testing Error Handling
 
@@ -103,7 +154,7 @@ docker-compose up --build
 
 ### Using Different Addresses
 
-1. Modify the request body or query parameters
+1. Modify the request body in any validation request
 2. Update the address fields as needed
 3. The correlationId will be automatically generated
 
@@ -137,12 +188,18 @@ docker-compose up --build
 Always start by running the health check to ensure the service is available.
 
 ### 2. Basic Validation
-Test with a known valid address to verify the API is working correctly.
+Test with a known valid address using the "Complete" request to verify the API is working correctly.
 
-### 3. Error Scenarios
-Test various error conditions to ensure proper error handling.
+### 3. Minimal Validation
+Test with minimal required fields to ensure the API handles partial data appropriately.
 
-### 4. Correlation ID Tracking
+### 4. Error Scenarios
+Test various error conditions to ensure proper error handling:
+- Malformed JSON syntax
+- Invalid content types
+- Empty request bodies
+
+### 5. Correlation ID Tracking
 Verify that correlation IDs are properly returned in all responses.
 
 ## Troubleshooting
@@ -162,6 +219,7 @@ Verify that correlation IDs are properly returned in all responses.
    - Check the request format
    - Ensure all required fields are provided
    - Verify the correlationId is included
+   - Check for JSON syntax errors
 
 4. **500 Internal Server Error**
    - Check the service logs for detailed error information
@@ -201,10 +259,36 @@ Verify that correlation IDs are properly returned in all responses.
 
 ## Collection Features
 
-- **Pre-request Scripts**: Automatically generate correlation IDs
-- **Tests**: Basic response validation
+- **Pre-request Scripts**: Automatically generate correlation IDs for each request
 - **Environment Variables**: Easy configuration management
-- **Request Chaining**: Use previous request results in subsequent requests
+- **Structured Organization**: Requests organized by functionality (Health, Validation, Errors)
+- **Comprehensive Error Testing**: Multiple error scenarios to test edge cases
+
+## Request Body Examples
+
+### Complete Address Validation
+```json
+{
+  "correlationId": "{{correlationId}}",
+  "street": "6902 Silver Springs Dr NW",
+  "city": "Gig Harbor",
+  "state": "WA",
+  "zipcode": "98335",
+  "addressee": "John Blayter",
+  "candidates": 3,
+  "match": "range"
+}
+```
+
+### Minimal Address Validation
+```json
+{
+  "correlationId": "{{correlationId}}",
+  "street": "6902 Silver Springs",
+  "city": "Gig Harbor",
+  "state": "WA"
+}
+```
 
 ## Contributing
 
