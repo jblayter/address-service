@@ -179,6 +179,11 @@ jobs:
           # Debug: Print the version we're using
           echo "Using version: ${{ needs.bump-version.outputs.new_version }}"
           echo "App ID: ${{ secrets.DIGITALOCEAN_APP_ID }}"
+          echo "Image: ${{ env.REGISTRY }}/${{ env.IMAGE_NAME }}:v${{ needs.bump-version.outputs.new_version }}"
+          
+          # Verify the Docker image exists in Docker Hub
+          echo "Verifying Docker image exists..."
+          curl -s "https://hub.docker.com/v2/repositories/${{ env.IMAGE_NAME }}/tags/v${{ needs.bump-version.outputs.new_version }}/" | jq -r '.name' || echo "Image tag not found in Docker Hub"
           
           # Create app spec file with Docker Hub image
           cat > app-spec.yaml << EOF
@@ -191,6 +196,10 @@ jobs:
               repository: ${{ env.IMAGE_NAME }}
               tag: v${{ needs.bump-version.outputs.new_version }}
           EOF
+          
+          # Show the app spec for debugging
+          echo "App spec:"
+          cat app-spec.yaml
           
           # Update the app with the new spec
           doctl apps update "${{ secrets.DIGITALOCEAN_APP_ID }}" --spec app-spec.yaml
