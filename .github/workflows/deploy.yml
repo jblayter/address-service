@@ -192,14 +192,14 @@ jobs:
           
           # Create app spec file with Docker Hub image
           cat > app-spec.yaml << EOF
-          name: address-service
+          name: address-service-app
           services:
-          - name: address-service
+          - name: address-service-app
             image:
               registry_type: DOCKER_HUB
               registry: ${{ env.REGISTRY }}
               repository: ${{ env.IMAGE_NAME }}
-              tag: v${{ needs.bump-version.outputs.new_version }}
+              tag: latest
           EOF
           
           # Show the app spec for debugging
