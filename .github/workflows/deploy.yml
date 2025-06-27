@@ -168,6 +168,11 @@ jobs:
     environment: production
     if: github.ref == 'refs/heads/main'
     steps:
+      - name: Wait for Docker Hub tag propagation
+        run: |
+          echo "Waiting 60 seconds to allow Docker Hub tag to propagate..."
+          sleep 60
+
       - name: Deploy to Digital Ocean App Platform
         run: |
           # Install doctl CLI using snap (more reliable)
@@ -194,7 +199,7 @@ jobs:
               registry_type: DOCKER_HUB
               registry: ${{ env.REGISTRY }}
               repository: ${{ env.IMAGE_NAME }}
-              tag: latest
+              tag: v${{ needs.bump-version.outputs.new_version }}
           EOF
           
           # Show the app spec for debugging
