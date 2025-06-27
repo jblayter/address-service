@@ -97,8 +97,6 @@ jobs:
     steps:
       - name: Checkout code
         uses: actions/checkout@v4
-        with:
-          token: ${{ secrets.ACTIONS_PAT }}
 
       - name: Set up Docker Buildx
         uses: docker/setup-buildx-action@v3
@@ -139,13 +137,11 @@ jobs:
     steps:
       - name: Checkout code
         uses: actions/checkout@v4
-        with:
-          token: ${{ secrets.ACTIONS_PAT }}
 
       - name: Create Release
         uses: actions/create-release@v1
         env:
-          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+          GITHUB_TOKEN: ${{ secrets.ACTIONS_PAT }}
         with:
           tag_name: v${{ needs.bump-version.outputs.new_version }}
           release_name: Release v${{ needs.bump-version.outputs.new_version }}
@@ -156,3 +152,9 @@ jobs:
             
             ### Docker Image
             - Image: `${{ env.REGISTRY }}/${{ env.IMAGE_NAME }}:v${{ needs.bump-version.outputs.new_version }}`
+            - Latest: `${{ env.REGISTRY }}/${{ env.IMAGE_NAME }}:latest`
+            
+            ### Deployment
+            This release has been automatically deployed to Digital Ocean.
+          draft: false
+          prerelease: false
