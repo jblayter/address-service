@@ -170,9 +170,9 @@ jobs:
     steps:
       - name: Deploy to Digital Ocean App Platform
         run: |
-          # Install doctl CLI
-          curl -sL https://github.com/digitalocean/doctl/releases/latest/download/doctl-1.94.0-linux-amd64.tar.gz | tar -xzv
-          sudo mv doctl /usr/local/bin
+          # Install doctl CLI using the official installation script
+          curl -sL https://github.com/digitalocean/doctl/releases/latest/download/install.sh | sh
+          sudo mv ~/.doctl/bin/doctl /usr/local/bin
           
           # Authenticate with Digital Ocean
           doctl auth init --access-token ${{ secrets.DIGITALOCEAN_ACCESS_TOKEN }}
