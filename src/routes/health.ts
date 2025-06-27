@@ -1,4 +1,5 @@
 import { FastifyInstance, FastifyReply, FastifyRequest } from 'fastify';
+import packageJson from '../../package.json';
 
 export async function healthRoutes(fastify: FastifyInstance) {
   fastify.get('/', async (_request: FastifyRequest, _reply: FastifyReply) => {
@@ -6,7 +7,7 @@ export async function healthRoutes(fastify: FastifyInstance) {
       status: 'ok',
       timestamp: new Date().toISOString(),
       service: 'address-service',
-      version: '1.0.0',
+      version: packageJson.version,
     };
   });
 
