@@ -178,29 +178,29 @@ jobs:
           
           # Debug: Print the version we're using
           echo "Using version: ${{ needs.bump-version.outputs.new_version }}"
-          echo "App ID: ${{ secrets.DIGITALOCEAN_APP_ID }}"
+          echo "App ID: ${{ env.DIGITALOCEAN_APP_ID }}"
           
           # Create app spec file with Docker Hub image
           cat > app-spec.yaml << EOF
           name: address-service
           services:
           - name: address-service
+            image:
+              registry_type: DOCKER_HUB
+              registry: ${{ env.REGISTRY }}
+              repository: ${{ env.IMAGE_NAME }}
+              tag: v${{ needs.bump-version.outputs.new_version }}
             source_dir: /
             dockerfile_path: Dockerfile
             github:
               repo: ${{ github.repository }}
               branch: main
-            docker_registry:
-              registry_type: DOCKER_HUB
-              registry: ${{ env.REGISTRY }}
-              image: ${{ env.IMAGE_NAME }}
-              tag: v${{ needs.bump-version.outputs.new_version }}
           EOF
           
           # Update the app with the new spec
-          doctl apps update "${{ secrets.DIGITALOCEAN_APP_ID }}" --spec app-spec.yaml
+          doctl apps update "${{ env.DIGITALOCEAN_APP_ID }}" --spec app-spec.yaml
           
           # Create a new deployment
-          doctl apps create-deployment "${{ secrets.DIGITALOCEAN_APP_ID }}"
+          doctl apps create-deployment "${{ env.DIGITALOCEAN_APP_ID }}"
           
           echo "Deployment to Digital Ocean App Platform initiated with image: ${{ env.REGISTRY }}/${{ env.IMAGE_NAME }}:v${{ needs.bump-version.outputs.new_version }}"
