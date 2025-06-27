@@ -168,54 +168,16 @@ jobs:
     environment: production
     if: github.ref == 'refs/heads/main'
     steps:
-      - name: Checkout code
-        uses: actions/checkout@v4
-
       - name: Deploy to Digital Ocean App Platform
-        uses: digitalocean/app_action@main
-        with:
-          app_name: ${{ secrets.DIGITALOCEAN_APP_NAME }}
-          token: ${{ secrets.DIGITALOCEAN_ACCESS_TOKEN }}
-          images: |
-            ${{ env.REGISTRY }}/${{ env.IMAGE_NAME }}:${{ needs.bump-version.outputs.new_version }}
-
-      - name: Deploy to Digital Ocean Droplet (Alternative)
-        uses: appleboy/ssh-action@v1.0.3
-        with:
-          host: ${{ secrets.DIGITALOCEAN_DROPLET_HOST }}
-          username: ${{ secrets.DIGITALOCEAN_DROPLET_USER }}
-          key: ${{ secrets.DIGITALOCEAN_DROPLET_SSH_KEY }}
-          script: |
-            # Pull the latest image
-            docker pull ${{ env.REGISTRY }}/${{ env.IMAGE_NAME }}:${{ needs.bump-version.outputs.new_version }}
-            
-            # Stop existing container
-            docker stop address-service || true
-            docker rm address-service || true
-            
-            # Run new container
-            docker run -d \
-              --name address-service \
-              --restart unless-stopped \
-              -p 3000:3000 \
-              -e NODE_ENV=production \
-              ${{ env.REGISTRY }}/${{ env.IMAGE_NAME }}:${{ needs.bump-version.outputs.new_version }}
-            
-            # Clean up old images
-            docker image prune -f
-
-      - name: Create Digital Ocean Tag
         run: |
-          # Create a tag for this deployment
-          curl -X POST \
-            -H "Content-Type: application/json" \
-            -H "Authorization: Bearer ${{ secrets.DIGITALOCEAN_ACCESS_TOKEN }}" \
-            -d '{"name":"v${{ needs.bump-version.outputs.new_version }}"}' \
-            "https://api.digitalocean.com/v2/tags"
+          # Install doctl CLI
+          curl -sL https://github.com/digitalocean/doctl/releases/latest/download/doctl-1.94.0-linux-amd64.tar.gz | tar -xzv
+          sudo mv doctl /usr/local/bin
           
-          # Add resources to the tag (you'll need to update these resource IDs)
-          curl -X POST \
-            -H "Content-Type: application/json" \
-            -H "Authorization: Bearer ${{ secrets.DIGITALOCEAN_ACCESS_TOKEN }}" \
-            -d '{"resources":[{"resource_id":"${{ secrets.DIGITALOCEAN_DROPLET_ID }}","resource_type":"droplet"}]}' \
-            "https://api.digitalocean.com/v2/tags/v${{ needs.bump-version.outputs.new_version }}/resources"
+          # Authenticate with Digital Ocean
+          doctl auth init --access-token ${{ secrets.DIGITALOCEAN_ACCESS_TOKEN }}
+          
+          # Create a new deployment for the app
+          doctl apps create-deployment ${{ secrets.DIGITALOCEAN_APP_ID }}
+          
+          echo "Deployment to Digital Ocean App Platform initiated"

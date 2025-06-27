@@ -12,7 +12,7 @@ A Node.js microservice for address validation using the Smarty US Street Address
 - Grafana Cloud integration for observability
 - **Automated CI/CD with GitHub Actions**
 - **Docker Hub publishing**
-- **Digital Ocean deployment**
+- **Digital Ocean App Platform deployment**
 
 ## Quick Start
 
@@ -100,7 +100,7 @@ This project includes automated CI/CD pipelines using GitHub Actions:
   - Automatic version bumping and tagging
   - Docker image building and publishing to Docker Hub
   - GitHub release creation
-  - Deployment to Digital Ocean
+  - Deployment to Digital Ocean App Platform
 
 ### Quick Setup
 

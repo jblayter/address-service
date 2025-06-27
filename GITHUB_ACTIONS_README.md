@@ -26,7 +26,7 @@ This repository includes automated CI/CD pipelines using GitHub Actions for test
 - **Bump Version**: Automatically increments version and creates git tag
 - **Build and Push**: Builds and pushes Docker image to Docker Hub
 - **Create Release**: Creates GitHub release with release notes
-- **Deploy to Digital Ocean**: Deploys to Digital Ocean App Platform or Droplet
+- **Deploy to Digital Ocean**: Deploys to Digital Ocean App Platform
 
 ## Environment Setup
 
@@ -50,19 +50,10 @@ DOCKERHUB_USERNAME=your-dockerhub-username
 DOCKERHUB_TOKEN=your-dockerhub-access-token
 ```
 
-#### Digital Ocean (Choose one deployment method)
-
-##### Option 1: App Platform
+#### Digital Ocean App Platform
 ```
 DIGITALOCEAN_ACCESS_TOKEN=your-digitalocean-api-token
-DIGITALOCEAN_APP_NAME=your-app-name
-```
-
-##### Option 2: Droplet Deployment
-```
-DIGITALOCEAN_DROPLET_HOST=your-droplet-ip
-DIGITALOCEAN_DROPLET_USER=root
-DIGITALOCEAN_DROPLET_SSH_KEY=your-private-ssh-key
+DIGITALOCEAN_APP_ID=your-app-id
 ```
 
 ## Setup Instructions
@@ -80,9 +71,7 @@ DIGITALOCEAN_DROPLET_SSH_KEY=your-private-ssh-key
    - Go to your repository → Settings → Environments → production
    - Add `DOCKERHUB_USERNAME` and `DOCKERHUB_TOKEN`
 
-### 2. Digital Ocean Setup
-
-#### Option A: App Platform (Recommended)
+### 2. Digital Ocean App Platform Setup (Recommended)
 
 1. Create a Digital Ocean account
 2. Create an API token:
@@ -95,30 +84,11 @@ DIGITALOCEAN_DROPLET_SSH_KEY=your-private-ssh-key
    - Go to Apps → Create App
    - Connect your GitHub repository
    - Configure the app settings
-   - Note the app name
+   - Note the app ID
 
 4. Add secrets to GitHub production environment:
    - `DIGITALOCEAN_ACCESS_TOKEN`
-   - `DIGITALOCEAN_APP_NAME`
-
-#### Option B: Droplet Deployment
-
-1. Create a Digital Ocean Droplet
-2. Set up SSH access
-3. Install Docker on the droplet
-4. Generate SSH key pair for GitHub Actions
-5. Add the public key to the droplet's `~/.ssh/authorized_keys`
-6. Add secrets to GitHub production environment:
-   - `DIGITALOCEAN_DROPLET_HOST`
-   - `DIGITALOCEAN_DROPLET_USER`
-   - `DIGITALOCEAN_DROPLET_SSH_KEY` (private key)
-
-### 3. Repository Permissions
-
-Ensure your repository has the following permissions:
-- **Actions**: Read and write permissions
-- **Contents**: Read and write permissions
-- **Metadata**: Read-only access
+   - `DIGITALOCEAN_APP_ID`
 
 ## Usage
 
@@ -130,7 +100,7 @@ Ensure your repository has the following permissions:
    - Bumps patch version
    - Builds and pushes Docker image
    - Creates GitHub release
-   - Deploys to Digital Ocean
+   - Deploys to Digital Ocean App Platform
 
 ### Manual Deployment
 
@@ -168,8 +138,7 @@ Images are tagged with:
 
 2. **Digital Ocean deployment failed**
    - Verify API token has correct permissions
-   - Check app name exists in App Platform
-   - For droplets, ensure SSH key is properly configured
+   - Check app ID exists in App Platform
 
 3. **Version bump failed**
    - Ensure repository has write permissions
