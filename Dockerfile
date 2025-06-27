@@ -25,9 +25,6 @@ WORKDIR /app
 RUN addgroup -g 1001 -S nodejs
 RUN adduser -S nodejs -u 1001
 
-# Install PM2 globally
-RUN npm install -g pm2
-
 # Copy package files
 COPY package*.json ./
 
@@ -38,9 +35,6 @@ RUN npm cache clean --force && \
 
 # Copy built application from builder stage
 COPY --from=builder /app/dist ./dist
-
-# Copy PM2 ecosystem file
-COPY ecosystem.config.js ./
 
 # Create logs directory
 RUN mkdir -p logs && chown -R nodejs:nodejs logs
@@ -61,5 +55,5 @@ EXPOSE 3000
 HEALTHCHECK --interval=30s --timeout=3s --start-period=5s --retries=3 \
   CMD node -e "require('http').get('http://localhost:3000/health', (res) => { process.exit(res.statusCode === 200 ? 0 : 1) })"
 
-# Start the application with PM2
-CMD ["pm2-runtime", "start", "ecosystem.config.js", "--only", "address-service"] 
+# Start the application
+CMD ["npm", "start"] 

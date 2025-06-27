@@ -8,6 +8,91 @@ import {
 import { logThirdPartyApiCall } from '../middleware';
 import axios from 'axios';
 
+// Configure axios interceptors for request/response logging
+const setupAxiosLogging = () => {
+  // Request interceptor
+  axios.interceptors.request.use(
+    (config) => {
+      const correlationId = config.headers['x-correlation-id'] || 'unknown';
+      const timestamp = new Date().toISOString();
+      
+      // Store start time for duration calculation
+      (config as any).startTime = Date.now();
+      
+      console.log(`[${timestamp}] [${correlationId}] 🚀 Axios Request:`, {
+        method: config.method?.toUpperCase(),
+        url: config.url,
+        headers: {
+          ...config.headers,
+          // Mask sensitive headers
+          'auth-id': config.headers['auth-id'] ? '[REDACTED]' : undefined,
+          'auth-token': config.headers['auth-token'] ? '[REDACTED]' : undefined,
+        },
+        params: config.params,
+        data: config.data
+      });
+      
+      return config;
+    },
+    (error) => {
+      const correlationId = error.config?.headers?.['x-correlation-id'] || 'unknown';
+      const timestamp = new Date().toISOString();
+      
+      console.error(`[${timestamp}] [${correlationId}] ❌ Axios Request Error:`, {
+        message: error.message,
+        config: {
+          method: error.config?.method?.toUpperCase(),
+          url: error.config?.url,
+          headers: error.config?.headers
+        }
+      });
+      
+      return Promise.reject(error);
+    }
+  );
+
+  // Response interceptor
+  axios.interceptors.response.use(
+    (response) => {
+      const correlationId = response.config.headers['x-correlation-id'] || 'unknown';
+      const timestamp = new Date().toISOString();
+      const startTime = (response.config as any).startTime || Date.now();
+      const duration = Date.now() - startTime;
+      
+      console.log(`[${timestamp}] [${correlationId}] ✅ Axios Response:`, {
+        status: response.status,
+        statusText: response.statusText,
+        duration: `${duration}ms`,
+        url: response.config.url,
+        headers: response.headers,
+        data: response.data
+      });
+      
+      return response;
+    },
+    (error) => {
+      const correlationId = error.config?.headers?.['x-correlation-id'] || 'unknown';
+      const timestamp = new Date().toISOString();
+      const startTime = (error.config as any).startTime || Date.now();
+      const duration = Date.now() - startTime;
+      
+      console.error(`[${timestamp}] [${correlationId}] ❌ Axios Response Error:`, {
+        status: error.response?.status,
+        statusText: error.response?.statusText,
+        duration: `${duration}ms`,
+        url: error.config?.url,
+        message: error.message,
+        responseData: error.response?.data
+      });
+      
+      return Promise.reject(error);
+    }
+  );
+};
+
+// Initialize axios logging
+setupAxiosLogging();
+
 export class AddressService {
   private static readonly SMARTY_BASE_URL = 'https://us-street.api.smarty.com/street-address';
 
@@ -64,7 +149,7 @@ export class AddressService {
       );
 
       // Make API call to Smarty
-      const response = await this.callSmartyApi(smartyRequest);
+      const response = await this.callSmartyApi(smartyRequest, correlationId);
       const duration = Date.now() - startTime;
 
       // Log the successful response
@@ -193,7 +278,7 @@ export class AddressService {
   /**
    * Make the API call to Smarty
    */
-  private static async callSmartyApi(params: Record<string, string>): Promise<SmartyApiResponse> {
+  private static async callSmartyApi(params: Record<string, string>, correlationId?: string): Promise<SmartyApiResponse> {
     const authId = process.env.SMARTY_AUTH_ID;
     const authToken = process.env.SMARTY_AUTH_TOKEN;
     if (!authId || !authToken) {
@@ -209,8 +294,9 @@ export class AddressService {
       const response = await axios.get(url.toString(), {
         headers: {
           'Accept': 'application/json',
-          'User-Agent': 'AddressService/1.0.0'
-        }
+          'User-Agent': 'AddressService/1.0.0',
+          'x-correlation-id': correlationId || 'unknown'
+        },
       });
 
       return response.data as SmartyApiResponse;
@@ -229,12 +315,21 @@ export class AddressService {
    * Process the Smarty API response and determine validation results
    */
   private static processSmartyResponse(
-    response: SmartyApiResponse, 
+    response: SmartyApiResponse | SmartyAddress[], 
     originalRequest: AddressValidationRequest
   ): AddressValidationResponse['data'] {
-    const addresses = response.addresses || [];
+    console.log('🔍 Processing Smarty response:');
+    console.log('  - Response type:', typeof response);
+    console.log('  - Is array:', Array.isArray(response));
+    console.log('  - Response keys:', response && typeof response === 'object' ? Object.keys(response) : 'N/A');
+    
+    // If response is an array, use it directly; otherwise, use response.addresses
+    const addresses = Array.isArray(response) ? response : response.addresses || [];
+    
+    console.log('📋 Found', addresses.length, 'addresses');
     
     if (addresses.length === 0) {
+      console.log('❌ No addresses found in response');
       return {
         validated: false,
         deliverable: false,
@@ -246,8 +341,17 @@ export class AddressService {
     const bestMatch = addresses[0];
     const suggestions = addresses.slice(1);
 
+    console.log('🏠 Best match found:', bestMatch ? {
+      input_index: bestMatch.input_index,
+      candidate_index: bestMatch.candidate_index,
+      delivery_line_1: bestMatch.delivery_line_1,
+      last_line: bestMatch.last_line,
+      analysis: bestMatch.analysis
+    } : 'No best match');
+
     // Determine validation status based on Smarty documentation
     if (!bestMatch) {
+      console.log('❌ No valid address match found');
       return {
         validated: false,
         deliverable: false,
@@ -256,6 +360,7 @@ export class AddressService {
     }
 
     const validationResult = this.interpretValidationResult(bestMatch);
+    console.log('✅ Validation result:', validationResult);
 
     const result: AddressValidationResponse['data'] = {
       validated: validationResult.validated,
@@ -271,6 +376,12 @@ export class AddressService {
     if (suggestions.length > 0) {
       result.suggestions = suggestions;
     }
+
+    console.log('📊 Final processed result:', {
+      validated: result.validated,
+      deliverable: result.deliverable,
+      validation_notes: result.validation_notes
+    });
 
     return result;
   }
@@ -289,56 +400,114 @@ export class AddressService {
 
     const enhancedMatch = address.analysis?.enhanced_match;
     const dpvFootnotes = address.analysis?.dpv_footnotes;
+    const dpvMatchCode = address.analysis?.dpv_match_code;
     const recordType = address.metadata?.record_type;
 
-    if (!enhancedMatch) {
-      notes.push('Address not found in USPS database or Smarty proprietary data');
-      return { validated: false, deliverable: false, notes };
-    }
+    console.log('🔍 Interpreting validation result:');
+    console.log('  - Enhanced match:', enhancedMatch);
+    console.log('  - DPV footnotes:', dpvFootnotes);
+    console.log('  - DPV match code:', dpvMatchCode);
+    console.log('  - Record type:', recordType);
 
-    // Check for postal match
-    if (enhancedMatch.includes('postal-match')) {
-      validated = true;
-      notes.push('Address found in USPS database');
+    // If enhanced_match is available, use it as primary indicator
+    if (enhancedMatch) {
+      // Check for postal match
+      if (enhancedMatch.includes('postal-match')) {
+        validated = true;
+        notes.push('Address found in USPS database');
 
-      // Check for missing secondary information
-      if (enhancedMatch.includes('missing-secondary')) {
-        if (dpvFootnotes?.includes('N1')) {
-          notes.push('Secondary information (apartment/suite) is required for delivery');
+        // Check for missing secondary information
+        if (enhancedMatch.includes('missing-secondary')) {
+          if (dpvFootnotes?.includes('N1')) {
+            notes.push('Secondary information (apartment/suite) is required for delivery');
+          } else {
+            notes.push('Secondary information is available but not required');
+          }
+        }
+
+        // Check for unknown secondary information
+        if (enhancedMatch.includes('unknown-secondary')) {
+          if (dpvFootnotes?.includes('C1')) {
+            notes.push('Secondary information provided but not recognized - correction needed');
+          } else if (dpvFootnotes?.includes('CC')) {
+            notes.push('Secondary information provided but not needed for delivery');
+          }
+        }
+
+        // Check deliverability
+        if (address.analysis?.dpv_vacant === 'N' && 
+            address.analysis?.dpv_no_stat === 'N' && 
+            !dpvFootnotes?.includes('R7')) {
+          deliverable = true;
+          notes.push('Address is deliverable by USPS');
         } else {
-          notes.push('Secondary information is available but not required');
+          notes.push('Address may not be deliverable by USPS');
+        }
+
+      } else if (enhancedMatch.includes('non-postal-match')) {
+        validated = true;
+        notes.push('Address found in Smarty proprietary data (non-USPS)');
+        
+        // Non-USPS addresses are not deliverable by USPS
+        if (enhancedMatch.includes('missing-secondary')) {
+          notes.push('Secondary information might be needed for delivery');
+        }
+        if (enhancedMatch.includes('unknown-secondary')) {
+          notes.push('Secondary information provided but not recognized');
         }
       }
-
-      // Check for unknown secondary information
-      if (enhancedMatch.includes('unknown-secondary')) {
-        if (dpvFootnotes?.includes('C1')) {
+    } else {
+      // Fallback: Use dpv_match_code and other fields when enhanced_match is not available
+      console.log('⚠️  Enhanced match not available, using fallback validation logic');
+      
+      if (dpvMatchCode === 'Y') {
+        validated = true;
+        notes.push('Address validated using DPV match code');
+        
+        // Check deliverability based on DPV fields
+        if (address.analysis?.dpv_vacant === 'N' && 
+            address.analysis?.dpv_no_stat === 'N' && 
+            !dpvFootnotes?.includes('R7')) {
+          deliverable = true;
+          notes.push('Address is deliverable by USPS');
+        } else {
+          notes.push('Address may not be deliverable by USPS');
+        }
+        
+        // Add notes about secondary information if available
+        if (dpvFootnotes?.includes('N1')) {
+          notes.push('Secondary information (apartment/suite) is required for delivery');
+        } else if (dpvFootnotes?.includes('C1')) {
           notes.push('Secondary information provided but not recognized - correction needed');
         } else if (dpvFootnotes?.includes('CC')) {
           notes.push('Secondary information provided but not needed for delivery');
         }
-      }
-
-      // Check deliverability
-      if (address.analysis?.dpv_vacant === 'N' && 
-          address.analysis?.dpv_no_stat === 'N' && 
-          !dpvFootnotes?.includes('R7')) {
-        deliverable = true;
-        notes.push('Address is deliverable by USPS');
-      } else {
-        notes.push('Address may not be deliverable by USPS');
-      }
-
-    } else if (enhancedMatch.includes('non-postal-match')) {
-      validated = true;
-      notes.push('Address found in Smarty proprietary data (non-USPS)');
-      
-      // Non-USPS addresses are not deliverable by USPS
-      if (enhancedMatch.includes('missing-secondary')) {
+        
+      } else if (dpvMatchCode === 'N') {
+        validated = false;
+        notes.push('Address not found in USPS database (DPV match code: N)');
+      } else if (dpvMatchCode === 'S') {
+        validated = true;
+        notes.push('Address validated (DPV match code: S - Secondary information missing)');
         notes.push('Secondary information might be needed for delivery');
-      }
-      if (enhancedMatch.includes('unknown-secondary')) {
-        notes.push('Secondary information provided but not recognized');
+      } else if (dpvMatchCode === 'D') {
+        validated = true;
+        notes.push('Address validated (DPV match code: D - Secondary information missing)');
+        notes.push('Secondary information might be needed for delivery');
+      } else {
+        // If we have an address but no clear validation indicators, assume it's validated
+        // This handles cases where the API returns address data but doesn't provide clear validation flags
+        validated = true;
+        notes.push('Address appears to be valid based on returned data');
+        
+        // Check if we can determine deliverability
+        if (address.analysis?.dpv_vacant === 'N' && 
+            address.analysis?.dpv_no_stat === 'N') {
+          deliverable = true;
+          notes.push('Address appears to be deliverable');
+        } else {
+          notes.push('Deliverability cannot be determined');
+        }
       }
     }
 

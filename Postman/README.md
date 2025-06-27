@@ -1,6 +1,14 @@
 # Address Service API - Postman Collection
 
-This Postman collection provides comprehensive testing for the Address Service API, which validates US addresses using the Smarty US Street Address API.
+This Postman collection provides a comprehensive set of requests to test the Address Service API, which validates US addresses using the Smarty US Street Address API.
+
+## Collection Overview
+
+The collection includes:
+- **Health Check**: Verify service status
+- **Address Validation**: Validate addresses via POST and GET requests
+- **Error Handling**: Test various error scenarios
+- **Correlation ID Tracking**: Test request tracing functionality
 
 ## Setup Instructions
 
@@ -9,129 +17,106 @@ This Postman collection provides comprehensive testing for the Address Service A
 1. Open Postman
 2. Click "Import" button
 3. Select the `Address_Service_API.postman_collection.json` file
-4. The collection will be imported with all test requests
+4. The collection will be imported with all requests
 
 ### 2. Configure Environment Variables
 
-The collection uses the following variables:
+The collection uses environment variables for easy configuration:
 
 - **`baseUrl`**: The base URL for your Address Service API (default: `http://localhost:3000`)
-- **`correlationId`**: Correlation ID for request tracking (auto-generated if empty)
+- **`correlationId`**: A unique identifier for request tracing (auto-generated)
 
-To configure these:
+### 3. Set Up Environment
 
-1. Click on the collection name in Postman
-2. Go to the "Variables" tab
-3. Update the `baseUrl` if your service is running on a different port or host
-4. The `correlationId` will be automatically generated for each request
+1. In Postman, click the "Environments" tab
+2. Create a new environment or use the "Address Service" environment
+3. Add the following variables:
 
-### 3. Set Up Smarty API Credentials
+| Variable | Initial Value | Current Value | Description |
+|----------|---------------|---------------|-------------|
+| `baseUrl` | `http://localhost:3000` | `http://localhost:3000` | Base URL for the API |
+| `correlationId` | `{{$guid}}` | `{{$guid}}` | Auto-generated correlation ID |
 
-Before testing address validation endpoints, you need to configure Smarty API credentials:
+### 4. Start Your Service
 
-1. Set the following environment variables in your Address Service:
-   - `SMARTY_AUTH_ID`: Your Smarty authentication ID
-   - `SMARTY_AUTH_TOKEN`: Your Smarty authentication token
+Before running the requests, ensure your Address Service is running:
 
-2. Or set them in your shell:
-   ```bash
-   export SMARTY_AUTH_ID="your-auth-id"
-   export SMARTY_AUTH_TOKEN="your-auth-token"
-   ```
+```bash
+# Development mode
+npm run dev
 
-## Collection Structure
+# Or with Docker
+docker-compose up --build
+```
 
-### Health Check
-- **GET Health Check**: Verifies the service is running
+## Request Descriptions
 
-### Address Validation
-The collection includes comprehensive tests for address validation:
+### 1. Health Check
+- **Method**: GET
+- **URL**: `{{baseUrl}}/health`
+- **Description**: Verifies the service is running and healthy
+- **Expected Response**: 200 OK with service status
 
-#### POST Endpoints
-- **POST Validate Address - Complete**: Full address validation with all fields
-- **POST Validate Address - Minimal**: Minimal required fields only
-- **POST Validate Address - With Secondary**: Address with secondary info (apartment, suite)
-- **POST Validate Address - PO Box**: PO Box address validation
-- **POST Validate Address - Invalid (Missing correlationId)**: Tests required correlationId validation
-- **POST Validate Address - Invalid (Field Length)**: Tests field length validation
-- **POST Validate Address - Invalid (Candidates Range)**: Tests candidates parameter validation
+### 2. Validate Address (POST)
+- **Method**: POST
+- **URL**: `{{baseUrl}}/api/v1/addresses/validate`
+- **Description**: Validates an address using JSON request body
+- **Headers**: 
+  - `Content-Type: application/json`
+  - `X-Correlation-ID: {{correlationId}}`
+- **Body**: JSON with address details and correlationId
 
-#### GET Endpoints
-- **GET Validate Address - Complete**: GET request with all query parameters
-- **GET Validate Address - Minimal**: GET request with minimal parameters
-- **GET Validate Address - Invalid (Missing correlationId)**: Tests required correlationId in query
-- **GET Validate Address - Special Characters**: Tests URL encoding with special characters
+### 3. Validate Address (GET)
+- **Method**: GET
+- **URL**: `{{baseUrl}}/api/v1/addresses/validate`
+- **Description**: Validates an address using query parameters
+- **Query Params**: All address fields and correlationId
 
-### Error Scenarios
-- **POST Malformed JSON**: Tests JSON parsing errors
-- **POST Invalid Content-Type**: Tests content-type validation
-- **POST Empty Body**: Tests empty request body handling
+### 4. Error Scenarios
 
-## Key Features
+#### Missing Correlation ID
+- Tests validation when correlationId is missing from request body
+- Expected: 400 Bad Request
 
-### Correlation ID Tracking
-- Every request automatically includes a correlation ID
-- Correlation ID is required in request body/query parameters
-- Correlation ID is returned in response headers and body
-- Auto-generated if not provided
+#### Invalid Address
+- Tests with an invalid/non-existent address
+- Expected: 200 OK with validation failure
 
-### Request Validation
-- All requests include proper Content-Type headers
-- Required fields are validated
-- Field length limits are enforced
-- Parameter ranges are validated
+#### Missing Required Fields
+- Tests with missing required address fields
+- Expected: 400 Bad Request
 
-### Response Validation
-- All responses include correlation ID
-- Success/error status is properly indicated
-- Validation results include detailed information
-- Error messages are descriptive
+## Usage Examples
 
-## Testing Workflow
+### Basic Address Validation
 
-1. **Start with Health Check**: Verify the service is running
-2. **Test Valid Addresses**: Use the complete and minimal address validation requests
-3. **Test Edge Cases**: Try PO Box addresses and addresses with secondary information
-4. **Test Error Handling**: Use the invalid request scenarios
-5. **Test Both Methods**: Try both POST and GET endpoints
+1. Select the "Validate Address (POST)" request
+2. The request body is pre-filled with example data
+3. Click "Send"
+4. Check the response for validation results
 
-## Expected Responses
+### Testing Error Handling
 
-### Successful Address Validation
+1. Select any of the error scenario requests
+2. Click "Send"
+3. Verify the error response format and status code
+
+### Using Different Addresses
+
+1. Modify the request body or query parameters
+2. Update the address fields as needed
+3. The correlationId will be automatically generated
+
+## Response Format
+
+### Success Response
 ```json
 {
+  "correlationId": "req-123",
   "success": true,
-  "correlationId": "your-correlation-id",
   "data": {
-    "validated": true,
-    "deliverable": true,
-    "address": {
-      "delivery_line_1": "1600 Amphitheatre Pkwy",
-      "last_line": "Mountain View CA 94043-1351",
-      "components": {
-        "primary_number": "1600",
-        "street_name": "Amphitheatre",
-        "street_suffix": "Pkwy",
-        "city_name": "Mountain View",
-        "state_abbreviation": "CA",
-        "zipcode": "94043",
-        "plus4_code": "1351"
-      },
-      "metadata": {
-        "latitude": 37.422,
-        "longitude": -122.084,
-        "precision": "Rooftop"
-      },
-      "analysis": {
-        "enhanced_match": "postal-match",
-        "dpv_match_code": "Y",
-        "dpv_vacant": "N"
-      }
-    },
-    "validation_notes": [
-      "Address found in USPS database",
-      "Address is deliverable by USPS"
-    ]
+    "valid": true,
+    "addresses": [...]
   }
 }
 ```
@@ -139,46 +124,103 @@ The collection includes comprehensive tests for address validation:
 ### Error Response
 ```json
 {
+  "correlationId": "req-123",
   "success": false,
-  "correlationId": "your-correlation-id",
-  "error": "Smarty authentication credentials not configured",
-  "data": {
-    "validated": false,
-    "deliverable": false,
-    "validation_notes": []
-  }
+  "error": "Error description",
+  "details": ["Error details"]
 }
 ```
+
+## Testing Workflow
+
+### 1. Health Check
+Always start by running the health check to ensure the service is available.
+
+### 2. Basic Validation
+Test with a known valid address to verify the API is working correctly.
+
+### 3. Error Scenarios
+Test various error conditions to ensure proper error handling.
+
+### 4. Correlation ID Tracking
+Verify that correlation IDs are properly returned in all responses.
 
 ## Troubleshooting
 
 ### Common Issues
 
-1. **401 Unauthorized**: Check your Smarty API credentials
-2. **400 Bad Request**: Verify request body format and required fields
-3. **500 Internal Server Error**: Check server logs for detailed error information
-4. **Connection Refused**: Ensure the Address Service is running on the correct port
+1. **Connection Refused**
+   - Ensure the Address Service is running
+   - Check the `baseUrl` environment variable
+   - Verify the service is running on the correct port
+
+2. **401 Unauthorized**
+   - Check your Smarty API credentials in the `.env` file
+   - Verify the credentials are valid
+
+3. **400 Bad Request**
+   - Check the request format
+   - Ensure all required fields are provided
+   - Verify the correlationId is included
+
+4. **500 Internal Server Error**
+   - Check the service logs for detailed error information
+   - Verify the Smarty API service is accessible
 
 ### Debugging Tips
 
-1. Check the response headers for correlation ID
-2. Review the response body for detailed error messages
-3. Verify all required fields are present in requests
-4. Ensure proper JSON formatting in request bodies
+1. **Check Service Logs**
+   ```bash
+   # If running with Docker
+   docker-compose logs address-service
+   
+   # If running locally
+   npm run dev:logs
+   ```
 
-## Running the Service
+2. **Verify Environment Variables**
+   ```bash
+   # Check if .env file exists and has correct values
+   cat .env
+   ```
 
-To run the Address Service for testing:
+3. **Test with curl**
+   ```bash
+   curl -X GET http://localhost:3000/health
+   ```
 
-```bash
-# Development mode
-npm run dev
+## Environment Configuration
 
-# Production mode
-npm start
+### Development
+- **baseUrl**: `http://localhost:3000`
+- **Service Port**: 3000
 
-# With Docker
-docker-compose up
-```
+### Production
+- **baseUrl**: `https://your-production-domain.com`
+- **Service Port**: 3000
+
+## Collection Features
+
+- **Pre-request Scripts**: Automatically generate correlation IDs
+- **Tests**: Basic response validation
+- **Environment Variables**: Easy configuration management
+- **Request Chaining**: Use previous request results in subsequent requests
+
+## Contributing
+
+To add new requests or modify existing ones:
+
+1. Create a new request in the collection
+2. Add appropriate tests and pre-request scripts
+3. Update this README with the new request description
+4. Export the updated collection
+
+## Support
+
+For issues with the Postman collection:
+1. Check the request configuration
+2. Verify environment variables
+3. Test with curl to isolate the issue
+4. Check the service logs for detailed error information
 
 The service will be available at `http://localhost:3000` by default. 

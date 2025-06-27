@@ -1,33 +1,96 @@
 # Address Validation Service
 
-A comprehensive address validation service built with TypeScript, Fastify, and Smarty's US Street Address API. This service provides real-time address validation, standardization, and deliverability assessment for US addresses.
+A Node.js/TypeScript service that validates US addresses using the Smarty US Street Address API.
 
-## 🚀 Features
+## Features
 
-- **Real-time Address Validation**: Validate addresses against USPS database and Smarty's proprietary data
-- **Address Standardization**: Automatically correct and standardize address formats
-- **Deliverability Assessment**: Determine if addresses are deliverable by USPS and other carriers
-- **Secondary Address Support**: Handle apartment numbers, suite numbers, and other secondary information
-- **Multiple Candidates**: Get multiple address suggestions for fuzzy matches
-- **Comprehensive Logging**: Full request/response logging with correlation IDs
-- **Type Safety**: Fully typed with TypeScript for better development experience
+- **Address Validation**: Validate US addresses using Smarty's US Street Address API
+- **Correlation ID Tracking**: Every request requires a correlation ID for tracking
+- **Comprehensive Logging**: Detailed logging of API calls, requests, and responses
+- **Error Handling**: Robust error handling with detailed error messages
+- **TypeScript**: Full TypeScript support with type safety
+- **Testing**: Comprehensive test suite with Jest
+- **Docker Support**: Containerized deployment with Docker and Docker Compose
+- **Observability**: Integration with Grafana, Prometheus, Loki, and Tempo
 
-## 📋 API Endpoints
+## Setup
 
-### POST `/api/v1/addresses/validate`
+### Prerequisites
 
-Validate an address using a JSON request body.
+- Node.js 18+ 
+- Docker and Docker Compose (for containerized deployment)
+- Smarty US Street Address API credentials
+
+### 1. Install Dependencies
+
+```bash
+npm install
+```
+
+### 2. Configure Environment Variables
+
+Create a `.env` file in the root directory:
+
+```bash
+# Smarty US Street Address API Credentials
+# Get your credentials from: https://www.smarty.com/account/keys
+SMARTY_AUTH_ID=your_smarty_auth_id_here
+SMARTY_AUTH_TOKEN=your_smarty_auth_token_here
+
+# Application Configuration
+NODE_ENV=development
+PORT=3000
+```
+
+### 3. Get Smarty API Credentials
+
+1. Sign up for a Smarty account at [https://www.smarty.com/](https://www.smarty.com/)
+2. Navigate to your account dashboard
+3. Go to the "Keys" section
+4. Copy your Auth ID and Auth Token
+5. Update the `.env` file with your credentials
+
+## Usage
+
+### Development
+
+```bash
+# Start development server
+npm run dev
+
+# Run tests
+npm test
+
+# Build for production
+npm run build
+```
+
+### Production with Docker
+
+```bash
+# Build and start the service
+docker-compose up --build
+
+# Start with observability stack
+docker-compose --profile observability up --build
+```
+
+## API Endpoints
+
+### POST /api/validate-address
+
+Validate a US address using Smarty's US Street Address API.
 
 **Request Body:**
 ```json
 {
-  "street": "1600 Amphitheatre Parkway",
-  "street2": "Suite 100",
-  "city": "Mountain View",
-  "state": "CA",
-  "zipcode": "94043",
+  "correlationId": "req-12345",
+  "street": "1600 Pennsylvania Avenue NW",
+  "city": "Washington",
+  "state": "DC",
+  "zipcode": "20500",
   "addressee": "John Doe",
-  "candidates": 3,
+  "candidates": 1,
   "match": "range"
 }
 ```
@@ -36,282 +99,225 @@ Validate an address using a JSON request body.
 ```json
 {
   "success": true,
-  "correlationId": "550e8400-e29b-41d4-a716-446655440000",
+  "correlationId": "req-12345",
   "data": {
     "validated": true,
     "deliverable": true,
-    "address": {
-      "input_index": 0,
-      "candidate_index": 0,
-      "delivery_line_1": "1600 Amphitheatre Pkwy",
-      "delivery_line_2": "Ste 100",
-      "last_line": "Mountain View CA 94043-1351",
-      "components": {
-        "primary_number": "1600",
-        "street_name": "Amphitheatre",
-        "street_suffix": "Pkwy",
-        "city_name": "Mountain View",
-        "state_abbreviation": "CA",
-        "zipcode": "94043",
-        "plus4_code": "1351"
-      },
-      "metadata": {
-        "latitude": 37.422,
-        "longitude": -122.084,
-        "precision": "Rooftop"
-      },
-      "analysis": {
-        "enhanced_match": "postal-match",
-        "dpv_match_code": "Y",
-        "dpv_footnotes": "AABB"
-      }
-    },
-    "suggestions": [],
     "validation_notes": [
       "Address found in USPS database",
       "Address is deliverable by USPS"
-    ]
+    ],
+    "address": {
+      "input_index": 0,
+      "candidate_index": 0,
+      "delivery_line_1": "1600 Pennsylvania Avenue NW",
+      "last_line": "Washington DC 20500-0003",
+      "components": {
+        "primary_number": "1600",
+        "street_name": "Pennsylvania",
+        "city_name": "Washington",
+        "state_abbreviation": "DC",
+        "zipcode": "20500"
+      },
+      "metadata": {
+        "record_type": "S",
+        "latitude": 38.8977,
+        "longitude": -77.0365
+      },
+      "analysis": {
+        "dpv_match_code": "Y",
+        "enhanced_match": "postal-match",
+        "dpv_vacant": "N",
+        "dpv_no_stat": "N"
+      }
+    }
   }
 }
 ```
 
-### GET `/api/v1/addresses/validate`
+### GET /health
 
-Validate an address using query parameters (for simple cases).
+Health check endpoint.
 
-**Query Parameters:**
-- `street` (optional): Street address (max 100 characters)
-- `street2` (optional): Secondary address (max 100 characters)
-- `city` (optional): City name (max 64 characters)
-- `state` (optional): State abbreviation (max 32 characters)
-- `zipcode` (optional): ZIP code (max 10 characters)
-- `addressee` (optional): Recipient name (max 64 characters)
-- `candidates` (optional): Number of suggestions (1-10, default 1)
-- `match` (optional): Match type: `strict`, `range`, or `invalid` (default `range`)
-- `format` (optional): Output format: `project-usa`
-
-**Example:**
-```
-GET /api/v1/addresses/validate?street=1600+Amphitheatre+Parkway&city=Mountain+View&state=CA&zipcode=94043
+**Response:**
+```json
+{
+  "status": "healthy",
+  "timestamp": "2024-01-01T00:00:00.000Z",
+  "correlationId": "health-check-123"
+}
 ```
 
-## 🔧 Configuration
+## Validation Logic
 
-### Environment Variables
+The service uses a comprehensive validation approach that handles different response formats from the Smarty API:
 
-Set the following environment variables for Smarty API access:
+### Primary Validation (enhanced_match field)
+When the `enhanced_match` field is available in the API response:
+- `postal-match`: Address found in USPS database
+- `non-postal-match`: Address found in Smarty proprietary data
+- `missing-secondary`: Secondary information (apartment/suite) is missing
+- `unknown-secondary`: Secondary information provided but not recognized
 
-```bash
-# Smarty API Credentials
-SMARTY_AUTH_ID=your_auth_id_here
-SMARTY_AUTH_TOKEN=your_auth_token_here
-
-# Optional: Logging level
-LOG_LEVEL=info
-```
-
-### Getting Smarty Credentials
-
-1. Sign up for a Smarty account at [smarty.com](https://www.smarty.com/)
-2. Navigate to your account dashboard
-3. Copy your Auth ID and Auth Token
-4. Add them to your environment variables
-
-## 🏃‍♂️ Running the Service
-
-### Development Mode
-
-```bash
-# Start the development server
-npm run dev
-
-# Test the validation service
-npm run test:validation
-```
-
-### Production Mode
-
-```bash
-# Build the application
-npm run build
-
-# Start the production server
-npm start
-```
-
-### Docker
-
-```bash
-# Build and run with Docker
-docker-compose up address-service-dev
-
-# Or for production
-docker-compose up address-service
-```
-
-## 📊 Validation Logic
-
-The service implements comprehensive validation logic based on Smarty's documentation:
-
-### Enhanced Match Types
-
-- **`postal-match`**: Address found in USPS database
-- **`non-postal-match`**: Address found in Smarty proprietary data (non-USPS)
-- **`missing-secondary`**: Secondary information (apartment/suite) is missing
-- **`unknown-secondary`**: Secondary information provided but not recognized
+### Fallback Validation (DPV match codes)
+When `enhanced_match` is not available, the service falls back to DPV (Delivery Point Validation) codes:
+- `Y`: Address validated and deliverable
+- `N`: Address not found in USPS database
+- `S`: Address validated but secondary information missing
+- `D`: Address validated but secondary information missing (different format)
 
 ### Deliverability Assessment
+The service determines deliverability based on:
+- `dpv_vacant`: Whether the address is vacant
+- `dpv_no_stat`: Whether the address is a "no-stat" address
+- `dpv_footnotes`: Additional delivery information
+- `record_type`: Type of address (S=Street, P=PO Box, etc.)
 
-**USPS Deliverability:**
-- `dpv_vacant = 'N'` (not vacant)
-- `dpv_no_stat = 'N'` (not no-stat)
-- `dpv_footnotes` does not contain 'R7'
+## Error Handling
 
-**Non-USPS Carrier Deliverability:**
-- `record_type` is not 'P' (not a PO Box)
+The service provides detailed error responses:
 
-### Validation Notes
-
-The service provides detailed validation notes explaining:
-- Whether the address was found in USPS or Smarty data
-- Secondary information requirements
-- Deliverability status
-- Any issues that need user attention
-
-## 🔍 Logging and Observability
-
-### Correlation ID Tracking
-
-Every request gets a unique correlation ID that's used throughout the request lifecycle:
-
-```json
-{
-  "level": "info",
-  "msg": "Address validation request",
-  "correlationId": "550e8400-e29b-41d4-a716-446655440000",
-  "requestBody": { "street": "1600 Amphitheatre Parkway" }
-}
-```
-
-### Smarty API Logging
-
-All Smarty API calls are logged with correlation IDs:
-
-```json
-{
-  "correlationId": "550e8400-e29b-41d4-a716-446655440000",
-  "timestamp": "2024-01-15T10:30:45.100Z",
-  "method": "GET",
-  "url": "https://us-street.api.smarty.com/street-address",
-  "requestBody": { "street": "1600 Amphitheatre Parkway" },
-  "responseStatus": 200,
-  "duration": 45,
-  "service": "smarty-us-street-api"
-}
-```
-
-### Grafana Integration
-
-The service is configured to work with Grafana for monitoring:
-- Request/response metrics
-- API call performance
-- Error rates and validation success rates
-- Correlation ID tracking across services
-
-## 🧪 Testing
-
-### Manual Testing
-
-Use the provided test script:
-
-```bash
-npm run test:validation
-```
-
-This will test various scenarios:
-- Valid addresses
-- Addresses with secondary information
-- Invalid addresses
-- Partial addresses
-- Multiple candidates
-
-### API Testing
-
-Test with curl:
-
-```bash
-# POST validation
-curl -X POST http://localhost:3001/api/v1/addresses/validate \
-  -H "Content-Type: application/json" \
-  -H "x-correlation-id: test-123" \
-  -d '{
-    "street": "1600 Amphitheatre Parkway",
-    "city": "Mountain View",
-    "state": "CA",
-    "zipcode": "94043"
-  }'
-
-# GET validation
-curl "http://localhost:3001/api/v1/addresses/validate?street=1600+Amphitheatre+Parkway&city=Mountain+View&state=CA&zipcode=94043"
-```
-
-## 📚 Error Handling
-
-### Common Error Responses
-
-**400 Bad Request:**
 ```json
 {
   "success": false,
+  "correlationId": "req-12345",
   "error": "Validation failed",
-  "correlationId": "550e8400-e29b-41d4-a716-446655440000",
   "data": {
     "validated": false,
     "deliverable": false,
     "validation_notes": [
-      "At least one of street, city, state, or zipcode must be provided"
+      "Street address is required",
+      "City is required"
     ]
   }
 }
 ```
 
-**500 Internal Server Error:**
-```json
-{
-  "success": false,
-  "error": "Smarty API error: 401 Unauthorized - Invalid credentials",
-  "correlationId": "550e8400-e29b-41d4-a716-446655440000"
-}
+## Testing
+
+### Run All Tests
+```bash
+npm test
 ```
 
-## 🔒 Security
+### Run Specific Test Suites
+```bash
+# Service tests
+npm test -- addressService.test.ts
 
-- All API calls use HTTPS
-- Authentication credentials are stored as environment variables
-- Input validation prevents injection attacks
-- Field length limits prevent buffer overflow attacks
+# Route tests
+npm test -- addressRoutes.test.ts
 
-## 📈 Performance
+# Middleware tests
+npm test -- middleware.test.ts
+```
 
-- Response times typically under 100ms
-- Automatic retry logic for transient failures
-- Connection pooling for API calls
-- Efficient JSON parsing and validation
+### Test Coverage
+```bash
+npm run test:coverage
+```
 
-## 🤝 Contributing
+## Observability
 
-1. Fork the repository
-2. Create a feature branch
-3. Make your changes
-4. Add tests for new functionality
-5. Submit a pull request
+### Logging
+- **Request Logging**: All incoming requests are logged with correlation IDs
+- **Response Logging**: All responses are logged with status and duration
+- **API Call Logging**: Third-party API calls to Smarty are logged
+- **Axios Logging**: HTTP requests and responses are logged with detailed information
 
-## 📄 License
+### Metrics
+- Request count and duration
+- Error rates
+- API call metrics
 
-This project is licensed under the MIT License.
+### Tracing
+- Distributed tracing with correlation IDs
+- Request flow tracking
 
-## 🔗 Resources
+### Monitoring
+- Health checks
+- Service status monitoring
+- API endpoint monitoring
 
-- [Smarty US Street Address API Documentation](https://www.smarty.com/docs/cloud/us-street-api)
-- [Fastify Documentation](https://www.fastify.io/docs/)
-- [TypeScript Documentation](https://www.typescriptlang.org/docs/) 
+## Docker Deployment
+
+### Development
+```bash
+docker-compose --profile dev up --build
+```
+
+### Production
+```bash
+docker-compose up --build
+```
+
+### With Observability Stack
+```bash
+docker-compose --profile observability up --build
+```
+
+## Configuration
+
+### Environment Variables
+
+| Variable | Description | Required | Default |
+|----------|-------------|----------|---------|
+| `SMARTY_AUTH_ID` | Smarty API Auth ID | Yes | - |
+| `SMARTY_AUTH_TOKEN` | Smarty API Auth Token | Yes | - |
+| `NODE_ENV` | Environment | No | `development` |
+| `PORT` | Server port | No | `3000` |
+
+### Smarty API Parameters
+
+| Parameter | Description | Required | Default |
+|-----------|-------------|----------|---------|
+| `street` | Street address | Yes | - |
+| `city` | City name | Yes | - |
+| `state` | State abbreviation | Yes | - |
+| `zipcode` | ZIP code | No | - |
+| `addressee` | Recipient name | No | - |
+| `candidates` | Number of candidates (1-10) | No | `1` |
+| `match` | Match strategy | No | `range` |
+
+## Troubleshooting
+
+### Common Issues
+
+1. **"No matching addresses found" despite valid address**
+   - Check if Smarty credentials are correctly set
+   - Verify the address format matches US standards
+   - Check API response logs for detailed error information
+
+2. **API authentication errors**
+   - Verify `SMARTY_AUTH_ID` and `SMARTY_AUTH_TOKEN` are set correctly
+   - Check if your Smarty account has sufficient credits
+   - Ensure your account is active
+
+3. **Validation always returns false**
+   - The service now handles responses both with and without `enhanced_match` field
+   - Check the logs for detailed validation reasoning
+   - Verify the address exists in USPS database
+
+### Debug Mode
+
+Enable debug logging by setting `NODE_ENV=development`. This will show:
+- Detailed API request/response logs
+- Validation logic steps
+- Processing decisions
+
+## Recent Fixes
+
+### Enhanced Match Field Handling
+**Issue**: The service was returning "No matching addresses found" even when Smarty API returned valid addresses, because the `enhanced_match` field was missing from the response.
+
+**Solution**: Updated the validation logic to:
+1. Use `enhanced_match` field when available (primary validation)
+2. Fall back to DPV match codes when `enhanced_match` is missing
+3. Provide detailed logging of validation decisions
+4. Handle various response formats from Smarty API
+
+**Result**: The service now correctly validates addresses regardless of whether the `enhanced_match` field is present in the API response.
+
+## License
+
+MIT License 

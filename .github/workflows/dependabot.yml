@@ -1,0 +1,50 @@
+name: Dependabot
+
+on:
+  pull_request:
+    branches: [ main ]
+
+permissions:
+  contents: read
+  pull-requests: write
+
+jobs:
+  dependabot:
+    runs-on: ubuntu-latest
+    if: github.actor == 'dependabot[bot]'
+    steps:
+      - name: Dependabot metadata
+        id: metadata
+        uses: dependabot/fetch-metadata@v1
+        with:
+          github-token: "${{ secrets.GITHUB_TOKEN }}"
+
+      - name: Enable auto-merge for Dependabot PRs
+        if: steps.metadata.outputs.update-type == 'version-update:semver-patch'
+        run: gh pr merge --auto --merge "$PR_URL"
+        env:
+          PR_URL: ${{github.event.pull_request.html_url}}
+          GITHUB_TOKEN: ${{secrets.GITHUB_TOKEN}}
+
+      - name: Run tests for Dependabot PRs
+        if: steps.metadata.outputs.update-type != 'version-update:semver-patch'
+        uses: actions/checkout@v4
+
+      - name: Setup Node.js
+        if: steps.metadata.outputs.update-type != 'version-update:semver-patch'
+        uses: actions/setup-node@v4
+        with:
+          node-version: '22'
+          cache: 'npm'
+
+      - name: Install dependencies
+        if: steps.metadata.outputs.update-type != 'version-update:semver-patch'
+        run: npm ci
+
+      - name: Run tests
+        if: steps.metadata.outputs.update-type != 'version-update:semver-patch'
+        run: npm test
+
+      - name: Run linting
+        if: steps.metadata.outputs.update-type != 'version-update:semver-patch'
+        run: npm run lint 
