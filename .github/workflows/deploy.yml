@@ -178,7 +178,7 @@ jobs:
           
           # Debug: Print the version we're using
           echo "Using version: ${{ needs.bump-version.outputs.new_version }}"
-          echo "App ID: ${{ env.DIGITALOCEAN_APP_ID }}"
+          echo "App ID: ${{ secrets.DIGITALOCEAN_APP_ID }}"
           
           # Create app spec file with Docker Hub image
           cat > app-spec.yaml << EOF
@@ -190,6 +190,9 @@ jobs:
               registry: ${{ env.REGISTRY }}
               repository: ${{ env.IMAGE_NAME }}
               tag: v${{ needs.bump-version.outputs.new_version }}
+              registry_credentials:
+                username: ${{ secrets.DOCKERHUB_USERNAME }}
+                password: ${{ secrets.DOCKERHUB_TOKEN }}
             source_dir: /
             dockerfile_path: Dockerfile
             github:
