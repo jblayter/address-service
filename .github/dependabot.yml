@@ -8,6 +8,8 @@ updates:
       day: "monday"
       time: "09:00"
     open-pull-requests-limit: 10
+    target-branch: "main"
+    versioning-strategy: "auto"
     reviewers:
       - "jblayter"
     assignees:
@@ -27,6 +29,8 @@ updates:
       day: "monday"
       time: "09:00"
     open-pull-requests-limit: 10
+    target-branch: "main"
+    versioning-strategy: "auto"
     reviewers:
       - "jblayter"
     assignees:
@@ -46,6 +50,8 @@ updates:
       day: "monday"
       time: "09:00"
     open-pull-requests-limit: 10
+    target-branch: "main"
+    versioning-strategy: "auto"
     reviewers:
       - "jblayter"
     assignees:
