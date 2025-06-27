@@ -181,7 +181,27 @@ jobs:
           # Authenticate with Digital Ocean
           doctl auth init --access-token ${{ secrets.DIGITALOCEAN_ACCESS_TOKEN }}
           
-          # Create a new deployment for the app
+          # Create app spec file with Docker Hub image
+          cat > app-spec.yaml << EOF
+          name: address-service
+          services:
+          - name: address-service
+            source_dir: /
+            dockerfile_path: Dockerfile
+            github:
+              repo: ${{ github.repository }}
+              branch: main
+            docker_registry:
+              registry_type: DOCKER_HUB
+              registry: ${{ env.REGISTRY }}
+              image: ${{ env.IMAGE_NAME }}
+              tag: v${{ needs.bump-version.outputs.new_version }}
+          EOF
+          
+          # Update the app with the new spec
+          doctl apps update ${{ secrets.DIGITALOCEAN_APP_ID }} --spec app-spec.yaml
+          
+          # Create a new deployment
           doctl apps create-deployment ${{ secrets.DIGITALOCEAN_APP_ID }}
           
-          echo "Deployment to Digital Ocean App Platform initiated"
+          echo "Deployment to Digital Ocean App Platform initiated with image: ${{ env.REGISTRY }}/${{ env.IMAGE_NAME }}:v${{ needs.bump-version.outputs.new_version }}"
