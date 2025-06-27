@@ -194,7 +194,7 @@ jobs:
               registry_type: DOCKER_HUB
               registry: ${{ env.REGISTRY }}
               repository: ${{ env.IMAGE_NAME }}
-              tag: v${{ needs.bump-version.outputs.new_version }}
+              tag: latest
           EOF
           
           # Show the app spec for debugging
