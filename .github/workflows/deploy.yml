@@ -180,7 +180,6 @@ jobs:
             ${{ env.REGISTRY }}/${{ env.IMAGE_NAME }}:${{ needs.bump-version.outputs.new_version }}
 
       - name: Deploy to Digital Ocean Droplet (Alternative)
-        if: ${{ secrets.DIGITALOCEAN_DROPLET_SSH_KEY != '' }}
         uses: appleboy/ssh-action@v1.0.3
         with:
           host: ${{ secrets.DIGITALOCEAN_DROPLET_HOST }}
