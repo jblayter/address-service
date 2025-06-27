@@ -134,6 +134,7 @@ jobs:
   create-release:
     needs: [bump-version, build-and-push]
     runs-on: ubuntu-latest
+    environment: production
     if: github.ref == 'refs/heads/main'
     steps:
       - name: Checkout code
