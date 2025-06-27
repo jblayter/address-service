@@ -1,7 +1,6 @@
 import { FastifyInstance, FastifyReply, FastifyRequest } from 'fastify';
 import { AddressService } from '../services/addressService';
-import { AddressValidationRequest, AddressValidationResponse } from '../types/address';
-import { CorrelationIdRequest } from '../middleware';
+import { AddressValidationRequest } from '../types/address';
 
 // Request/Response schemas for validation
 const addressValidationSchema = {

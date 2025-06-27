@@ -1,4 +1,4 @@
-import { FastifyRequest, FastifyReply } from 'fastify';
+import { FastifyReply } from 'fastify';
 import { CorrelationIdRequest } from './correlationId';
 
 export interface ApiCallLog {
@@ -81,7 +81,7 @@ export function logApiCall(
 export function createApiLoggingMiddleware(service: string) {
   return function apiLoggingMiddleware(
     request: CorrelationIdRequest,
-    reply: FastifyReply
+    _reply: FastifyReply
   ): void {
     const context = createApiLoggingContext(request, service);
     

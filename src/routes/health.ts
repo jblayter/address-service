@@ -1,7 +1,7 @@
 import { FastifyInstance, FastifyReply, FastifyRequest } from 'fastify';
 
 export async function healthRoutes(fastify: FastifyInstance) {
-  fastify.get('/', async (request: FastifyRequest, reply: FastifyReply) => {
+  fastify.get('/', async (_request: FastifyRequest, _reply: FastifyReply) => {
     return {
       status: 'ok',
       timestamp: new Date().toISOString(),
@@ -10,7 +10,7 @@ export async function healthRoutes(fastify: FastifyInstance) {
     };
   });
 
-  fastify.get('/ready', async (request: FastifyRequest, reply: FastifyReply) => {
+  fastify.get('/ready', async (_request: FastifyRequest, _reply: FastifyReply) => {
     // Add any readiness checks here (database connection, etc.)
     return {
       status: 'ready',
@@ -19,7 +19,7 @@ export async function healthRoutes(fastify: FastifyInstance) {
     };
   });
 
-  fastify.get('/live', async (request: FastifyRequest, reply: FastifyReply) => {
+  fastify.get('/live', async (_request: FastifyRequest, _reply: FastifyReply) => {
     // Add any liveness checks here
     return {
       status: 'alive',

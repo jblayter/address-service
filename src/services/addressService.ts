@@ -2,8 +2,7 @@ import {
   AddressValidationRequest, 
   AddressValidationResponse, 
   SmartyApiResponse, 
-  SmartyAddress,
-  SmartyApiError 
+  SmartyAddress
 } from '../types/address';
 import { logThirdPartyApiCall } from '../middleware';
 import axios from 'axios';
@@ -316,7 +315,7 @@ export class AddressService {
    */
   private static processSmartyResponse(
     response: SmartyApiResponse | SmartyAddress[], 
-    originalRequest: AddressValidationRequest
+    _originalRequest: AddressValidationRequest
   ): AddressValidationResponse['data'] {
     console.log('🔍 Processing Smarty response:');
     console.log('  - Response type:', typeof response);

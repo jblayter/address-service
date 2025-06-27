@@ -1,8 +1,7 @@
 /// <reference types="jest" />
 
 import { AddressService } from '../services/addressService';
-import { AddressValidationRequest, SmartyApiResponse, SmartyAddress } from '../types/address';
-import { logThirdPartyApiCall } from '../middleware';
+import { AddressValidationRequest, SmartyApiResponse } from '../types/address';
 import axios from 'axios';
 
 // Mock the middleware logging function
@@ -42,8 +41,6 @@ afterEach(() => {
 });
 
 describe('AddressService', () => {
-  const mockCorrelationId = 'test-correlation-id-12345';
-
   const mockRequest: AddressValidationRequest = {
     correlationId: 'test-123',
     street: '1600 Amphitheatre Parkway',
