@@ -190,11 +190,6 @@ jobs:
               registry: ${{ env.REGISTRY }}
               repository: ${{ env.IMAGE_NAME }}
               tag: v${{ needs.bump-version.outputs.new_version }}
-            source_dir: /
-            dockerfile_path: Dockerfile
-            github:
-              repo: ${{ github.repository }}
-              branch: main
           EOF
           
           # Update the app with the new spec
