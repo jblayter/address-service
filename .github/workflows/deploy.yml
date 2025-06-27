@@ -195,10 +195,6 @@ jobs:
             github:
               repo: ${{ github.repository }}
               branch: main
-          registry_credentials:
-          - registry_type: DOCKER_HUB
-            username: ${{ secrets.DOCKERHUB_USERNAME }}
-            password: ${{ secrets.DOCKERHUB_TOKEN }}
           EOF
           
           # Update the app with the new spec
