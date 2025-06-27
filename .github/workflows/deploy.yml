@@ -170,13 +170,8 @@ jobs:
     steps:
       - name: Deploy to Digital Ocean App Platform
         run: |
-          # Install doctl CLI directly
-          DOCTL_VERSION=$(curl -s https://api.github.com/repos/digitalocean/doctl/releases/latest | grep '"tag_name":' | sed -E 's/.*"([^"]+)".*/\1/')
-          echo "Installing doctl version: $DOCTL_VERSION"
-          curl -sL "https://github.com/digitalocean/doctl/releases/download/${DOCTL_VERSION}/doctl-${DOCTL_VERSION}-linux-amd64.tar.gz" -o doctl.tar.gz
-          tar -xzf doctl.tar.gz
-          sudo mv doctl /usr/local/bin
-          rm doctl.tar.gz
+          # Install doctl CLI using snap (more reliable)
+          sudo snap install doctl --classic
           
           # Authenticate with Digital Ocean
           doctl auth init --access-token ${{ secrets.DIGITALOCEAN_ACCESS_TOKEN }}
