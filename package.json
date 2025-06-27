@@ -1,6 +1,6 @@
 {
   "name": "address-service",
-  "version": "1.0.33",
+  "version": "1.0.34",
   "description": "Address validation service using Smarty US Street Address API",
   "main": "dist/index.js",
   "scripts": {
