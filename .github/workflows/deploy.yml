@@ -163,7 +163,7 @@ jobs:
           prerelease: false
 
   deploy-to-digitalocean:
-    needs: [build-and-push, create-release]
+    needs: [bump-version, build-and-push, create-release]
     runs-on: ubuntu-latest
     environment: production
     if: github.ref == 'refs/heads/main'
@@ -175,6 +175,9 @@ jobs:
           
           # Authenticate with Digital Ocean
           doctl auth init --access-token ${{ secrets.DIGITALOCEAN_ACCESS_TOKEN }}
+          
+          # Debug: Print the version we're using
+          echo "Using version: ${{ needs.bump-version.outputs.new_version }}"
           
           # Create app spec file with Docker Hub image
           cat > app-spec.yaml << EOF
