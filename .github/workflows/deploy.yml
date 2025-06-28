@@ -162,6 +162,7 @@ jobs:
           draft: false
           prerelease: false
 
+
   terraform-deploy:
     needs: [build-and-push]
     runs-on: ubuntu-latest
