@@ -1,11 +1,5 @@
 terraform {
   required_version = ">= 1.3.0"
-  required_providers {
-    aws = {
-      source  = "hashicorp/aws"
-      version = ">= 5.0"
-    }
-  }
 }
 
 provider "aws" {
@@ -47,17 +41,4 @@ module "eks" {
 
 resource "aws_ecr_repository" "address_service" {
   name = "address-service"
-}
-
-output "cluster_endpoint" {
-  value = module.eks.cluster_endpoint
-}
-
-output "kubeconfig" {
-  value = module.eks.kubeconfig
-  sensitive = true
-}
-
-output "ecr_repo_url" {
-  value = aws_ecr_repository.address_service.repository_url
 } 
