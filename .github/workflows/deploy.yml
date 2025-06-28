@@ -1,4 +1,4 @@
-name: Deploy to Production
+name: Deploy to Production (AWS EKS)
 
 on:
   push:
@@ -158,58 +158,34 @@ jobs:
             - Latest: `${{ env.REGISTRY }}/${{ env.IMAGE_NAME }}:latest`
             
             ### Deployment
-            This release is being deployed to Digital Ocean.
+            This release is being deployed to AWS EKS.
           draft: false
           prerelease: false
 
-  deploy-to-digitalocean:
-    needs: [bump-version, build-and-push, create-release]
+  terraform-deploy:
     runs-on: ubuntu-latest
     environment: production
-    if: github.ref == 'refs/heads/main'
+    env:
+      AWS_ACCESS_KEY_ID: ${{ secrets.AWS_ACCESS_KEY_ID }}
+      AWS_SECRET_ACCESS_KEY: ${{ secrets.AWS_SECRET_ACCESS_KEY }}
+      AWS_DEFAULT_REGION: us-west-2
     steps:
-      - name: Wait for Docker Hub tag propagation
-        run: |
-          echo "Waiting 60 seconds to allow Docker Hub tag to propagate..."
-          sleep 60
+      - name: Checkout code
+        uses: actions/checkout@v4
 
-      - name: Deploy to Digital Ocean App Platform
-        run: |
-          # Install doctl CLI using snap (more reliable)
-          sudo snap install doctl --classic
-          
-          # Authenticate with Digital Ocean
-          doctl auth init --access-token ${{ secrets.DIGITALOCEAN_ACCESS_TOKEN }}
-          
-          # Debug: Print the version we're using
-          echo "Using version: ${{ needs.bump-version.outputs.new_version }}"
-          echo "App ID: ${{ secrets.DIGITALOCEAN_APP_ID }}"
-          echo "Image: ${{ env.REGISTRY }}/${{ env.IMAGE_NAME }}:v${{ needs.bump-version.outputs.new_version }}"
-          
-          # Verify the Docker image exists in Docker Hub
-          echo "Verifying Docker image exists..."
-          curl -s "https://hub.docker.com/v2/repositories/${{ env.IMAGE_NAME }}/tags/v${{ needs.bump-version.outputs.new_version }}/" | jq -r '.name' || echo "Image tag not found in Docker Hub"
-          
-          # Create app spec file with Docker Hub image
-          cat > app-spec.yaml << EOF
-          name: address-service-app
-          services:
-          - name: address-service-app
-            image:
-              registry_type: DOCKER_HUB
-              registry: ${{ env.REGISTRY }}
-              repository: ${{ env.IMAGE_NAME }}
-              tag: latest
-          EOF
-          
-          # Show the app spec for debugging
-          echo "App spec:"
-          cat app-spec.yaml
-          
-          # Update the app with the new spec
-          doctl apps update "${{ secrets.DIGITALOCEAN_APP_ID }}" --spec app-spec.yaml
-          
-          # Create a new deployment
-          doctl apps create-deployment "${{ secrets.DIGITALOCEAN_APP_ID }}"
-          
-          echo "Deployment to Digital Ocean App Platform initiated with image: ${{ env.REGISTRY }}/${{ env.IMAGE_NAME }}:v${{ needs.bump-version.outputs.new_version }}"
+      - name: Set up Terraform
+        uses: hashicorp/setup-terraform@v3
+        with:
+          terraform_version: 1.8.5
+
+      - name: Terraform Init
+        working-directory: terraform
+        run: terraform init
+
+      - name: Terraform Plan
+        working-directory: terraform
+        run: terraform plan
+
+      - name: Terraform Apply
+        working-directory: terraform
+        run: terraform apply -auto-approve
