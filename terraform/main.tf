@@ -23,7 +23,7 @@ module "vpc" {
 
 module "eks" {
   source          = "terraform-aws-modules/eks/aws"
-  version         = "20.13.0"
+  version         = "19.21.0"
   cluster_name    = "address-service-eks"
   cluster_version = "1.29"
   vpc_id          = module.vpc.vpc_id
