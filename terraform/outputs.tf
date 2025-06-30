@@ -144,4 +144,25 @@ output "configuration_summary" {
       public_access = var.enable_cluster_public_access
     }
   }
+}
+
+# IAM Outputs
+output "terraform_deployment_policy_arn" {
+  description = "ARN of the Terraform deployment IAM policy"
+  value       = aws_iam_policy.terraform_deployment.arn
+}
+
+output "terraform_deployment_policy_name" {
+  description = "Name of the Terraform deployment IAM policy"
+  value       = aws_iam_policy.terraform_deployment.name
+}
+
+output "terraform_deployment_user_name" {
+  description = "Name of the Terraform deployment IAM user"
+  value       = aws_iam_user.terraform_deployment.name
+}
+
+output "terraform_deployment_user_arn" {
+  description = "ARN of the Terraform deployment IAM user"
+  value       = aws_iam_user.terraform_deployment.arn
 } 
