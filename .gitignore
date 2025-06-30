@@ -86,3 +86,8 @@ temp/
 .Trashes
 ehthumbs.db
 Thumbs.db 
+
+# Terraform
+terraform/.terraform/
+terraform/.terraform.lock.hcl
+terraform/terraform.tfstate*

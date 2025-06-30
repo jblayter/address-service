@@ -35,12 +35,27 @@ provider "aws" {
   }
 }
 
-# VPC Module with enhanced configuration
+# Check if VPC exists by name
+data "aws_vpc" "existing" {
+  count = var.use_existing_vpc ? 1 : 0
+  filter {
+    name   = "tag:Name"
+    values = [var.vpc_name]
+  }
+}
+
+# Check if VPC exists by name (for conditional logic)
+locals {
+  vpc_exists = length(data.aws_vpc.existing) > 0
+}
+
+# VPC Module with enhanced configuration (only created if VPC doesn't exist)
 module "vpc" {
-  source  = "terraform-aws-modules/vpc/aws"
+  count  = var.use_existing_vpc ? 0 : 1
+  source = "terraform-aws-modules/vpc/aws"
   version = "5.8.1"
 
-  name = "${var.cluster_name}-vpc"
+  name = var.vpc_name
   cidr = var.vpc_cidr
 
   azs             = ["${var.aws_region}a", "${var.aws_region}b"]
@@ -65,15 +80,58 @@ module "vpc" {
   dhcp_options_domain_name_servers = ["AmazonProvidedDNS"]
 
   tags = merge(var.tags, {
+    Name        = var.vpc_name
     Environment = var.environment
     Project     = "address-service"
   })
 }
 
+# Local values for VPC and subnet references
+locals {
+  vpc_id = var.use_existing_vpc ? data.aws_vpc.existing[0].id : module.vpc[0].vpc_id
+  
+  # Get subnets from existing VPC if it exists
+  existing_private_subnets = var.use_existing_vpc ? data.aws_subnets.private[0].ids : []
+  existing_public_subnets  = var.use_existing_vpc ? data.aws_subnets.public[0].ids : []
+  
+  # Use module subnets if VPC was created, otherwise use existing subnets
+  private_subnets = var.use_existing_vpc ? local.existing_private_subnets : module.vpc[0].private_subnets
+  public_subnets  = var.use_existing_vpc ? local.existing_public_subnets : module.vpc[0].public_subnets
+}
+
+# Data sources for existing VPC subnets
+data "aws_subnets" "private" {
+  count = var.use_existing_vpc ? 1 : 0
+  
+  filter {
+    name   = "vpc-id"
+    values = [data.aws_vpc.existing[0].id]
+  }
+  
+  filter {
+    name   = "tag:kubernetes.io/role/internal-elb"
+    values = ["1"]
+  }
+}
+
+data "aws_subnets" "public" {
+  count = var.use_existing_vpc ? 1 : 0
+  
+  filter {
+    name   = "vpc-id"
+    values = [data.aws_vpc.existing[0].id]
+  }
+  
+  filter {
+    name   = "tag:kubernetes.io/role/elb"
+    values = ["1"]
+  }
+}
+
 # Security Group for EKS Cluster
 resource "aws_security_group" "eks_cluster" {
   name_prefix = "${var.cluster_name}-cluster-"
-  vpc_id      = module.vpc.vpc_id
+  vpc_id      = local.vpc_id
   description = "Security group for EKS cluster"
 
   egress {
@@ -99,8 +157,8 @@ module "eks" {
   cluster_name    = var.cluster_name
   cluster_version = "1.29"
 
-  vpc_id     = module.vpc.vpc_id
-  subnet_ids = module.vpc.private_subnets
+  vpc_id     = local.vpc_id
+  subnet_ids = local.private_subnets
 
   cluster_endpoint_public_access = var.enable_cluster_public_access
 

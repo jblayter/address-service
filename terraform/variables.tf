@@ -20,15 +20,10 @@ variable "environment" {
   }
 }
 
-variable "cluster_name" {
-  description = "Name of the EKS cluster"
+variable "vpc_name" {
+  description = "Name of the VPC to create or use"
   type        = string
-  default     = "address-service-cluster"
-
-  validation {
-    condition     = can(regex("^[a-zA-Z][a-zA-Z0-9-]*$", var.cluster_name))
-    error_message = "Cluster name must start with a letter and contain only alphanumeric characters and hyphens."
-  }
+  default     = "address-service-vpc"
 }
 
 variable "vpc_cidr" {
@@ -39,6 +34,29 @@ variable "vpc_cidr" {
   validation {
     condition     = can(cidrhost(var.vpc_cidr, 0))
     error_message = "VPC CIDR must be a valid CIDR block."
+  }
+}
+
+variable "create_vpc" {
+  description = "Whether to create a new VPC or use existing one"
+  type        = bool
+  default     = true
+}
+
+variable "use_existing_vpc" {
+  description = "Set to true to use an existing VPC, false to create a new one"
+  type        = bool
+  default     = false
+}
+
+variable "cluster_name" {
+  description = "Name of the EKS cluster"
+  type        = string
+  default     = "address-service-cluster"
+
+  validation {
+    condition     = can(regex("^[a-zA-Z][a-zA-Z0-9-]*$", var.cluster_name))
+    error_message = "Cluster name must start with a letter and contain only alphanumeric characters and hyphens."
   }
 }
 

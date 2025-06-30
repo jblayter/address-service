@@ -23,6 +23,14 @@ on:
         - dev
         - staging
         - prod
+      use_existing_vpc:
+        description: 'Use existing VPC (true) or create new VPC (false)'
+        required: true
+        default: 'false'
+        type: choice
+        options:
+        - 'true'
+        - 'false'
 
 env:
   REGISTRY: docker.io
@@ -211,19 +219,23 @@ jobs:
         run: |
           if [ "${{ github.event_name }}" = "workflow_dispatch" ]; then
             ENVIRONMENT="${{ github.event.inputs.environment }}"
+            USE_EXISTING_VPC="${{ github.event.inputs.use_existing_vpc }}"
           else
             ENVIRONMENT="prod"
+            USE_EXISTING_VPC="false"
           fi
           
-          terraform plan -var-file="environments/${ENVIRONMENT}.tfvars" -out=tfplan
+          terraform plan -var-file="environments/${ENVIRONMENT}.tfvars" -var="use_existing_vpc=${USE_EXISTING_VPC}" -out=tfplan
 
       - name: Terraform Apply
         working-directory: terraform
         run: |
           if [ "${{ github.event_name }}" = "workflow_dispatch" ]; then
             ENVIRONMENT="${{ github.event.inputs.environment }}"
+            USE_EXISTING_VPC="${{ github.event.inputs.use_existing_vpc }}"
           else
             ENVIRONMENT="prod"
+            USE_EXISTING_VPC="false"
           fi
           
           terraform apply -auto-approve tfplan
@@ -233,8 +245,10 @@ jobs:
         run: |
           if [ "${{ github.event_name }}" = "workflow_dispatch" ]; then
             ENVIRONMENT="${{ github.event.inputs.environment }}"
+            USE_EXISTING_VPC="${{ github.event.inputs.use_existing_vpc }}"
           else
             ENVIRONMENT="prod"
+            USE_EXISTING_VPC="false"
           fi
           
           CLUSTER_NAME=$(terraform output -raw cluster_name)
@@ -346,12 +360,21 @@ jobs:
 
       - name: Deployment Summary
         run: |
+          if [ "${{ github.event_name }}" = "workflow_dispatch" ]; then
+            ENVIRONMENT="${{ github.event.inputs.environment }}"
+            USE_EXISTING_VPC="${{ github.event.inputs.use_existing_vpc }}"
+          else
+            ENVIRONMENT="prod"
+            USE_EXISTING_VPC="false"
+          fi
+          
           echo "## Deployment Summary" >> $GITHUB_STEP_SUMMARY
-          echo "- **Environment**: ${{ github.event.inputs.environment || 'prod' }}" >> $GITHUB_STEP_SUMMARY
+          echo "- **Environment**: ${ENVIRONMENT}" >> $GITHUB_STEP_SUMMARY
           echo "- **Version**: v${{ needs.bump-version.outputs.new_version }}" >> $GITHUB_STEP_SUMMARY
           echo "- **EKS Cluster**: ${{ env.CLUSTER_NAME }}" >> $GITHUB_STEP_SUMMARY
           echo "- **Docker Image**: ${{ env.REGISTRY }}/${{ env.IMAGE_NAME }}:v${{ needs.bump-version.outputs.new_version }}" >> $GITHUB_STEP_SUMMARY
           echo "- **ECR Repository**: ${{ env.ECR_REPO_URL }}" >> $GITHUB_STEP_SUMMARY
+          echo "- **VPC Strategy**: ${USE_EXISTING_VPC}" >> $GITHUB_STEP_SUMMARY
           if [ -f service_url.txt ]; then
             echo "- **Service URL**: $(cat service_url.txt)" >> $GITHUB_STEP_SUMMARY
           fi

@@ -36,7 +36,7 @@ output "oidc_provider_arn" {
 
 output "cluster_name" {
   description = "The name of the EKS cluster"
-  value       = module.eks.cluster_name
+  value       = var.cluster_name
 }
 
 output "cluster_version" {
@@ -47,22 +47,32 @@ output "cluster_version" {
 # VPC Outputs
 output "vpc_id" {
   description = "The ID of the VPC"
-  value       = module.vpc.vpc_id
+  value       = local.vpc_id
+}
+
+output "vpc_name" {
+  description = "The name of the VPC"
+  value       = var.vpc_name
+}
+
+output "vpc_exists" {
+  description = "Whether the VPC already existed"
+  value       = local.vpc_exists
 }
 
 output "vpc_cidr_block" {
   description = "The CIDR block of the VPC"
-  value       = module.vpc.vpc_cidr_block
+  value       = var.vpc_cidr
 }
 
 output "private_subnets" {
-  description = "List of IDs of private subnets"
-  value       = module.vpc.private_subnets
+  description = "List of private subnet IDs"
+  value       = local.private_subnets
 }
 
 output "public_subnets" {
-  description = "List of IDs of public subnets"
-  value       = module.vpc.public_subnets
+  description = "List of public subnet IDs"
+  value       = local.public_subnets
 }
 
 # ECR Outputs
