@@ -6,7 +6,7 @@ terraform {
       version = ">= 5.0.0, < 6.0.0"
     }
   }
-  
+
   # Backend configuration for state management
   # Uncomment and configure when ready to use S3 backend
   # backend "s3" {
@@ -24,7 +24,7 @@ data "aws_region" "current" {}
 # Provider configuration with default tags
 provider "aws" {
   region = var.aws_region
-  
+
   default_tags {
     tags = {
       Environment = var.environment
@@ -50,15 +50,15 @@ module "vpc" {
   enable_nat_gateway     = true
   single_nat_gateway     = true
   one_nat_gateway_per_az = false
-  
+
   enable_flow_log                      = var.enable_vpc_flow_logs
   create_flow_log_cloudwatch_log_group = var.enable_vpc_flow_logs
   create_flow_log_cloudwatch_iam_role  = var.enable_vpc_flow_logs
   flow_log_max_aggregation_interval    = 60
-  
+
   enable_dns_hostnames = true
   enable_dns_support   = true
-  
+
   # EKS requirements
   enable_dhcp_options              = true
   dhcp_options_domain_name         = "ec2.internal"
@@ -98,7 +98,7 @@ module "eks" {
 
   cluster_name    = var.cluster_name
   cluster_version = "1.29"
-  
+
   vpc_id     = module.vpc.vpc_id
   subnet_ids = module.vpc.private_subnets
 
@@ -183,9 +183,9 @@ resource "aws_ecr_lifecycle_policy" "address_service" {
       rulePriority = 1
       description  = "Keep last ${var.ecr_image_retention_count} images"
       selection = {
-        tagStatus     = "any"
-        countType     = "imageCountMoreThan"
-        countNumber   = var.ecr_image_retention_count
+        tagStatus   = "any"
+        countType   = "imageCountMoreThan"
+        countNumber = var.ecr_image_retention_count
       }
       action = {
         type = "expire"

@@ -128,14 +128,14 @@ output "aws_region" {
 output "configuration_summary" {
   description = "Summary of the deployed configuration"
   value = {
-    environment        = var.environment
-    cluster_name       = var.cluster_name
-    aws_region         = var.aws_region
-    vpc_cidr           = var.vpc_cidr
-    node_group_config  = {
-      min_size     = var.node_group_min_size
-      max_size     = var.node_group_max_size
-      desired_size = var.node_group_desired_size
+    environment  = var.environment
+    cluster_name = var.cluster_name
+    aws_region   = var.aws_region
+    vpc_cidr     = var.vpc_cidr
+    node_group_config = {
+      min_size       = var.node_group_min_size
+      max_size       = var.node_group_max_size
+      desired_size   = var.node_group_desired_size
       instance_types = var.node_group_instance_types
     }
     features_enabled = {
