@@ -13,11 +13,11 @@ service:
 
 resources:
   limits:
-    cpu: 250m
-    memory: 256Mi
+    cpu: 200m
+    memory: 200Mi
   requests:
-    cpu: 100m
-    memory: 128Mi
+    cpu: 50m
+    memory: 64Mi
 
 env:
   NODE_ENV: "development"
