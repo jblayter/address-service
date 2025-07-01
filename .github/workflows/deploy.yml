@@ -1,4 +1,4 @@
-name: Deploy to Production (AWS EKS)
+name: CI/CD Pipeline (GitOps with ArgoCD)
 
 on:
   push:
@@ -23,14 +23,6 @@ on:
         - dev
         - staging
         - prod
-      use_existing_vpc:
-        description: 'Use existing VPC (true) or create new VPC (false)'
-        required: true
-        default: 'false'
-        type: choice
-        options:
-        - 'true'
-        - 'false'
 
 env:
   REGISTRY: docker.io
@@ -39,12 +31,9 @@ env:
 jobs:
   test:
     runs-on: ubuntu-latest
-    environment: production
     steps:
       - name: Checkout code
         uses: actions/checkout@v4
-        with:
-          token: ${{ secrets.ACTIONS_PAT }}
 
       - name: Setup Node.js
         uses: actions/setup-node@v4
@@ -64,14 +53,11 @@ jobs:
   bump-version:
     needs: test
     runs-on: ubuntu-latest
-    environment: production
     outputs:
       new_version: ${{ steps.bump.outputs.new_version }}
     steps:
       - name: Checkout code
         uses: actions/checkout@v4
-        with:
-          token: ${{ secrets.ACTIONS_PAT }}
 
       - name: Setup Node.js
         uses: actions/setup-node@v4
@@ -95,12 +81,18 @@ jobs:
           echo "new_version=${NEW_VERSION#v}" >> $GITHUB_OUTPUT
           echo "Bumped version to: ${NEW_VERSION#v}"
 
-      - name: Commit version bump
+      - name: Update Helm chart version
+        run: |
+          # Update the Helm chart version to match the app version
+          sed -i "s/^appVersion: .*/appVersion: \"${{ steps.bump.outputs.new_version }}\"/" charts/address-service/Chart.yaml
+          sed -i "s/^version: .*/version: ${{ steps.bump.outputs.new_version }}/" charts/address-service/Chart.yaml
+
+      - name: Commit version bump and chart updates
         run: |
           git config --local user.email "action@github.com"
           git config --local user.name "GitHub Action"
-          git add package.json package-lock.json
-          git commit -m "Bump version to ${{ steps.bump.outputs.new_version }} [skip ci]"
+          git add package.json package-lock.json charts/address-service/Chart.yaml
+          git commit -m "Bump version to ${{ steps.bump.outputs.new_version }} and update Helm chart [skip ci]"
           git tag v${{ steps.bump.outputs.new_version }}
 
       - name: Push changes and tag
@@ -111,7 +103,6 @@ jobs:
   build-and-push:
     needs: bump-version
     runs-on: ubuntu-latest
-    environment: production
     steps:
       - name: Log in to Docker Hub
         uses: docker/login-action@v3
@@ -152,7 +143,6 @@ jobs:
   create-release:
     needs: [bump-version, build-and-push]
     runs-on: ubuntu-latest
-    environment: production
     if: github.ref == 'refs/heads/main'
     steps:
       - name: Checkout code
@@ -161,7 +151,7 @@ jobs:
       - name: Create Release
         uses: actions/create-release@v1
         env:
-          GITHUB_TOKEN: ${{ secrets.ACTIONS_PAT }}
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
         with:
           tag_name: v${{ needs.bump-version.outputs.new_version }}
           release_name: Release v${{ needs.bump-version.outputs.new_version }}
@@ -174,207 +164,31 @@ jobs:
             - Image: `${{ env.REGISTRY }}/${{ env.IMAGE_NAME }}:v${{ needs.bump-version.outputs.new_version }}`
             - Latest: `${{ env.REGISTRY }}/${{ env.IMAGE_NAME }}:latest`
             
-            ### Deployment
-            This release is being deployed to AWS EKS.
+            ### GitOps Deployment
+            This release will be automatically deployed via ArgoCD GitOps.
+            - ArgoCD watches this repository for changes
+            - Helm chart updated to version ${{ needs.bump-version.outputs.new_version }}
+            - Application will be deployed to EKS cluster
           draft: false
           prerelease: false
 
-  terraform-deploy:
+  # Note: No terraform-deploy job needed since ArgoCD handles deployment via GitOps
+  # ArgoCD automatically syncs when it detects changes in the Git repository
+
+  deployment-summary:
     needs: [build-and-push]
     runs-on: ubuntu-latest
-    environment: production
-    env:
-      AWS_ACCESS_KEY_ID: ${{ secrets.AWS_ACCESS_KEY_ID }}
-      AWS_SECRET_ACCESS_KEY: ${{ secrets.AWS_SECRET_ACCESS_KEY }}
-      AWS_DEFAULT_REGION: us-west-2
     steps:
-      - name: Checkout code
-        uses: actions/checkout@v4
-
-      - name: Set up Terraform
-        uses: hashicorp/setup-terraform@v3
-        with:
-          terraform_version: 1.8.5
-
-      - name: Configure AWS credentials
-        run: |
-          aws configure set aws_access_key_id ${{ secrets.AWS_ACCESS_KEY_ID }}
-          aws configure set aws_secret_access_key ${{ secrets.AWS_SECRET_ACCESS_KEY }}
-          aws configure set default.region us-west-2
-
-      - name: Terraform Init
-        working-directory: terraform
-        run: terraform init
-
-      - name: Terraform Format Check
-        working-directory: terraform
-        run: terraform fmt -check
-
-      - name: Terraform Validate
-        working-directory: terraform
-        run: terraform validate
-
-      - name: Terraform Plan
-        working-directory: terraform
-        run: |
-          if [ "${{ github.event_name }}" = "workflow_dispatch" ]; then
-            ENVIRONMENT="${{ github.event.inputs.environment }}"
-            USE_EXISTING_VPC="${{ github.event.inputs.use_existing_vpc }}"
-          else
-            ENVIRONMENT="prod"
-            USE_EXISTING_VPC="false"
-          fi
-          
-          terraform plan -var-file="environments/${ENVIRONMENT}.tfvars" -var="use_existing_vpc=${USE_EXISTING_VPC}" -out=tfplan
-
-      - name: Terraform Apply
-        working-directory: terraform
-        run: |
-          if [ "${{ github.event_name }}" = "workflow_dispatch" ]; then
-            ENVIRONMENT="${{ github.event.inputs.environment }}"
-            USE_EXISTING_VPC="${{ github.event.inputs.use_existing_vpc }}"
-          else
-            ENVIRONMENT="prod"
-            USE_EXISTING_VPC="false"
-          fi
-          
-          terraform apply -auto-approve tfplan
-
-      - name: Get EKS Cluster Info
-        working-directory: terraform
-        run: |
-          if [ "${{ github.event_name }}" = "workflow_dispatch" ]; then
-            ENVIRONMENT="${{ github.event.inputs.environment }}"
-            USE_EXISTING_VPC="${{ github.event.inputs.use_existing_vpc }}"
-          else
-            ENVIRONMENT="prod"
-            USE_EXISTING_VPC="false"
-          fi
-          
-          CLUSTER_NAME=$(terraform output -raw cluster_name)
-          CLUSTER_ENDPOINT=$(terraform output -raw cluster_endpoint)
-          ECR_REPO_URL=$(terraform output -raw ecr_repository_url)
-          
-          echo "EKS Cluster Name: $CLUSTER_NAME" >> $GITHUB_ENV
-          echo "EKS Cluster Endpoint: $CLUSTER_ENDPOINT" >> $GITHUB_ENV
-          echo "ECR Repository URL: $ECR_REPO_URL" >> $GITHUB_ENV
-
-      - name: Update kubeconfig
-        run: |
-          aws eks update-kubeconfig --region us-west-2 --name ${{ env.CLUSTER_NAME }}
-
-      - name: Deploy Application to EKS
-        run: |
-          # Create namespace if it doesn't exist
-          kubectl create namespace address-service --dry-run=client -o yaml | kubectl apply -f -
-          
-          # Create ConfigMap for application configuration
-          kubectl create configmap address-service-config \
-            --from-literal=LOG_LEVEL=info \
-            --from-literal=NODE_ENV=production \
-            --dry-run=client -o yaml | kubectl apply -f -
-          
-          # Create deployment
-          cat <<EOF | kubectl apply -f -
-          apiVersion: apps/v1
-          kind: Deployment
-          metadata:
-            name: address-service
-            namespace: address-service
-            labels:
-              app: address-service
-          spec:
-            replicas: 2
-            selector:
-              matchLabels:
-                app: address-service
-            template:
-              metadata:
-                labels:
-                  app: address-service
-              spec:
-                containers:
-                - name: address-service
-                  image: ${{ env.REGISTRY }}/${{ env.IMAGE_NAME }}:v${{ needs.bump-version.outputs.new_version }}
-                  ports:
-                  - containerPort: 3000
-                  env:
-                  - name: LOG_LEVEL
-                    valueFrom:
-                      configMapKeyRef:
-                        name: address-service-config
-                        key: LOG_LEVEL
-                  - name: NODE_ENV
-                    valueFrom:
-                      configMapKeyRef:
-                        name: address-service-config
-                        key: NODE_ENV
-                  resources:
-                    requests:
-                      memory: "256Mi"
-                      cpu: "250m"
-                    limits:
-                      memory: "512Mi"
-                      cpu: "500m"
-                  livenessProbe:
-                    httpGet:
-                      path: /health
-                      port: 3000
-                    initialDelaySeconds: 30
-                    periodSeconds: 10
-                  readinessProbe:
-                    httpGet:
-                      path: /health
-                      port: 3000
-                    initialDelaySeconds: 5
-                    periodSeconds: 5
-          EOF
-          
-          # Create service
-          cat <<EOF | kubectl apply -f -
-          apiVersion: v1
-          kind: Service
-          metadata:
-            name: address-service
-            namespace: address-service
-            labels:
-              app: address-service
-          spec:
-            type: LoadBalancer
-            ports:
-            - port: 80
-              targetPort: 3000
-              protocol: TCP
-            selector:
-              app: address-service
-          EOF
-
-      - name: Wait for deployment
-        run: |
-          kubectl rollout status deployment/address-service -n address-service --timeout=300s
-
-      - name: Get service URL
-        run: |
-          kubectl get service address-service -n address-service -o jsonpath='{.status.loadBalancer.ingress[0].hostname}' > service_url.txt
-          echo "Service URL: $(cat service_url.txt)"
-
       - name: Deployment Summary
         run: |
-          if [ "${{ github.event_name }}" = "workflow_dispatch" ]; then
-            ENVIRONMENT="${{ github.event.inputs.environment }}"
-            USE_EXISTING_VPC="${{ github.event.inputs.use_existing_vpc }}"
-          else
-            ENVIRONMENT="prod"
-            USE_EXISTING_VPC="false"
-          fi
-          
-          echo "## Deployment Summary" >> $GITHUB_STEP_SUMMARY
-          echo "- **Environment**: ${ENVIRONMENT}" >> $GITHUB_STEP_SUMMARY
+          echo "## GitOps Deployment Summary" >> $GITHUB_STEP_SUMMARY
           echo "- **Version**: v${{ needs.bump-version.outputs.new_version }}" >> $GITHUB_STEP_SUMMARY
-          echo "- **EKS Cluster**: ${{ env.CLUSTER_NAME }}" >> $GITHUB_STEP_SUMMARY
           echo "- **Docker Image**: ${{ env.REGISTRY }}/${{ env.IMAGE_NAME }}:v${{ needs.bump-version.outputs.new_version }}" >> $GITHUB_STEP_SUMMARY
-          echo "- **ECR Repository**: ${{ env.ECR_REPO_URL }}" >> $GITHUB_STEP_SUMMARY
-          echo "- **VPC Strategy**: ${USE_EXISTING_VPC}" >> $GITHUB_STEP_SUMMARY
-          if [ -f service_url.txt ]; then
-            echo "- **Service URL**: $(cat service_url.txt)" >> $GITHUB_STEP_SUMMARY
-          fi
+          echo "- **Deployment Method**: GitOps via ArgoCD" >> $GITHUB_STEP_SUMMARY
+          echo "- **Status**: ArgoCD will automatically sync and deploy the new version" >> $GITHUB_STEP_SUMMARY
+          echo "" >> $GITHUB_STEP_SUMMARY
+          echo "### Next Steps:" >> $GITHUB_STEP_SUMMARY
+          echo "1. ArgoCD will detect the Git changes" >> $GITHUB_STEP_SUMMARY
+          echo "2. Helm chart will be updated with new image tag" >> $GITHUB_STEP_SUMMARY
+          echo "3. Application will be deployed to EKS cluster" >> $GITHUB_STEP_SUMMARY
+          echo "4. Monitor deployment in ArgoCD UI" >> $GITHUB_STEP_SUMMARY

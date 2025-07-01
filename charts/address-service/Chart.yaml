@@ -1,0 +1,16 @@
+apiVersion: v2
+name: address-service
+description: A Helm chart for the Address Service application
+type: application
+version: 0.1.0
+appVersion: "1.0.0"
+keywords:
+  - address
+  - service
+  - api
+home: https://github.com/jblayter/address-service
+sources:
+  - https://github.com/jblayter/address-service
+maintainers:
+  - name: DevOps Team
+    email: devops@example.com 
