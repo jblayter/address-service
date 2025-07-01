@@ -1,6 +1,6 @@
 import { FastifyInstance, FastifyReply, FastifyRequest } from 'fastify';
 import { AddressService } from '../services/addressService';
-import { AddressValidationRequest } from '../types/address';
+import { AddressValidationRequest } from '../interfaces/addressProvider';
 
 // Request/Response schemas for validation
 const addressValidationSchema = {
@@ -15,7 +15,7 @@ const addressValidationSchema = {
     addressee: { type: 'string', maxLength: 64 },
     candidates: { type: 'number', minimum: 1, maximum: 10 },
     match: { type: 'string', enum: ['strict', 'range', 'invalid'] },
-    format: { type: 'string', enum: ['project-usa'] }
+    format: { type: 'string' }
   },
   required: ['correlationId'],
   additionalProperties: false
@@ -31,31 +31,44 @@ const addressValidationResponseSchema = {
       properties: {
         validated: { type: 'boolean' },
         deliverable: { type: 'boolean' },
-        address: {
+        primaryAddress: {
           type: 'object',
           properties: {
-            input_index: { type: 'number' },
-            candidate_index: { type: 'number' },
-            addressee: { type: 'string' },
-            delivery_line_1: { type: 'string' },
-            delivery_line_2: { type: 'string' },
-            last_line: { type: 'string' },
-            delivery_point_barcode: { type: 'string' },
-            components: { type: 'object' },
-            metadata: { type: 'object' },
-            analysis: { type: 'object' }
+            deliveryLine1: { type: 'string' },
+            deliveryLine2: { type: 'string' },
+            city: { type: 'string' },
+            state: { type: 'string' },
+            zipcode: { type: 'string' },
+            plus4Code: { type: 'string' },
+            latitude: { type: 'number' },
+            longitude: { type: 'number' },
+            metadata: { type: 'object' }
           }
         },
         suggestions: {
           type: 'array',
-          items: { type: 'object' }
+          items: {
+            type: 'object',
+            properties: {
+              deliveryLine1: { type: 'string' },
+              deliveryLine2: { type: 'string' },
+              city: { type: 'string' },
+              state: { type: 'string' },
+              zipcode: { type: 'string' },
+              plus4Code: { type: 'string' },
+              latitude: { type: 'number' },
+              longitude: { type: 'number' },
+              metadata: { type: 'object' }
+            }
+          }
         },
-        validation_notes: {
+        validationNotes: {
           type: 'array',
           items: { type: 'string' }
-        }
+        },
+        providerData: { type: 'object' }
       },
-      required: ['validated', 'deliverable', 'validation_notes']
+      required: ['validated', 'deliverable', 'validationNotes']
     },
     error: { type: 'string' }
   },
@@ -63,7 +76,7 @@ const addressValidationResponseSchema = {
 };
 
 export async function addressRoutes(fastify: FastifyInstance) {
-  // POST /api/v1/addresses/validate - Validate an address using Smarty
+  // POST /api/v1/addresses/validate - Validate an address
   fastify.post('/validate', {
     schema: {
       body: addressValidationSchema,
@@ -80,7 +93,7 @@ export async function addressRoutes(fastify: FastifyInstance) {
               properties: {
                 validated: { type: 'boolean' },
                 deliverable: { type: 'boolean' },
-                validation_notes: {
+                validationNotes: {
                   type: 'array',
                   items: { type: 'string' }
                 }
@@ -109,7 +122,7 @@ export async function addressRoutes(fastify: FastifyInstance) {
         requestBody: request.body
       });
 
-      // Validate the address using Smarty
+      // Validate the address using the abstracted service
       const result = await AddressService.validateAddress(request.body, correlationId);
 
       // Log the validation result
@@ -118,7 +131,8 @@ export async function addressRoutes(fastify: FastifyInstance) {
         correlationId,
         validated: result.data?.validated,
         deliverable: result.data?.deliverable,
-        hasSuggestions: result.data?.suggestions && result.data.suggestions.length > 0
+        hasSuggestions: result.data?.suggestions && result.data.suggestions.length > 0,
+        provider: result.data?.providerData ? 'provider-data-available' : 'no-provider-data'
       });
 
       // Return appropriate status code based on result
@@ -145,7 +159,7 @@ export async function addressRoutes(fastify: FastifyInstance) {
     }
   });
 
-  // GET /api/v1/addresses/validate - Validate an address using query parameters (for simple cases)
+  // GET /api/v1/addresses/validate - Validate an address using query parameters
   fastify.get('/validate', {
     schema: {
       querystring: {
@@ -160,7 +174,7 @@ export async function addressRoutes(fastify: FastifyInstance) {
           addressee: { type: 'string', maxLength: 64 },
           candidates: { type: 'number', minimum: 1, maximum: 10 },
           match: { type: 'string', enum: ['strict', 'range', 'invalid'] },
-          format: { type: 'string', enum: ['project-usa'] }
+          format: { type: 'string' }
         },
         required: ['correlationId'],
         additionalProperties: false
@@ -178,7 +192,7 @@ export async function addressRoutes(fastify: FastifyInstance) {
               properties: {
                 validated: { type: 'boolean' },
                 deliverable: { type: 'boolean' },
-                validation_notes: {
+                validationNotes: {
                   type: 'array',
                   items: { type: 'string' }
                 }
@@ -207,7 +221,7 @@ export async function addressRoutes(fastify: FastifyInstance) {
         queryParams: request.query
       });
 
-      // Validate the address using Smarty
+      // Validate the address using the abstracted service
       const result = await AddressService.validateAddress(request.query, correlationId);
 
       // Log the validation result
@@ -216,7 +230,8 @@ export async function addressRoutes(fastify: FastifyInstance) {
         correlationId,
         validated: result.data?.validated,
         deliverable: result.data?.deliverable,
-        hasSuggestions: result.data?.suggestions && result.data.suggestions.length > 0
+        hasSuggestions: result.data?.suggestions && result.data.suggestions.length > 0,
+        provider: result.data?.providerData ? 'provider-data-available' : 'no-provider-data'
       });
 
       // Return appropriate status code based on result
